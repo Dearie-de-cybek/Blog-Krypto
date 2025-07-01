@@ -13,7 +13,7 @@ const TrendingNews = ({
           <h2 className="text-white text-xl font-bold mr-4 whitespace-nowrap">
             TRENDING NEWS
           </h2>
-          <div className="flex-1 h-px bg-gray-600"></div>
+          <div className="flex-1 h-px bg-white"></div>
         </div>
 
         {/* Content Grid */}

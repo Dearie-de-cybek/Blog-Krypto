@@ -1,7 +1,9 @@
 import React from 'react'
 import Header from '../components/Header'
 import FeaturedNewsCard from '../components/FeaturedNewsCard'
-import TrendingNews from '../components/TrendingNews'
+import TrendingNewsHeader from '../components/TrendingNewsHeader'
+import TrendingNewsCard from '../components/TrendingNewsCard'
+import PressReleaseCard from '../components/PressReleaseCard'
 
 const Home = () => {
   return (
@@ -16,11 +18,23 @@ const Home = () => {
           <FeaturedNewsCard />
           <FeaturedNewsCard />
         </div>
+      </div>
 
-        <TrendingNews 
-  smallCards={[...]} 
-  featuredArticle={{...}} 
-/>
+      {/* Trending News Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <TrendingNewsHeader />
+        
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Left Side - 3 Trending Cards */}
+          <div className="space-y-4">
+            <TrendingNewsCard />
+            <TrendingNewsCard />
+            <TrendingNewsCard />
+          </div>
+
+          {/* Right Side - Press Release */}
+          <PressReleaseCard />
+        </div>
       </div>
     </>
   )
