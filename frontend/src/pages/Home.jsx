@@ -5,6 +5,8 @@ import TrendingNewsHeader from "../components/TrendingNewsHeader";
 import TrendingNewsCard from "../components/TrendingNewsCard";
 import PressReleaseCard from "../components/PressReleaseCard";
 import FeaturedNewsHeader from "../components/FeaturedNewsHeader";
+import NewsletterSection from "../components/NewsletterSection";
+import FooterSection from "../components/Footer";
 
 const Home = () => {
   return (
@@ -38,7 +40,7 @@ const Home = () => {
         </div>
         {/* Featured News Section */}
 
-        <FeaturedNewsHeader className="mt-2"/>
+        <FeaturedNewsHeader className="mt-2" />
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Left Side - 3 Featured Cards */}
@@ -56,6 +58,8 @@ const Home = () => {
           </div>
         </div>
       </div>
+      <NewsletterSection />
+      <FooterSection />
     </>
   );
 };
