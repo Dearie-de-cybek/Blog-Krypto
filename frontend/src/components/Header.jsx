@@ -77,7 +77,7 @@ const Header = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
                 </div>
                 <span className="text-2xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
-                  CryptoScope
+                  KryptoExtract
                 </span>
               </Link>
             </motion.div>
