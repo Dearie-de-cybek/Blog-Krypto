@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
+const Admin = require('../models/Admin');
 
 // Protect admin routes
-exports.protect = (req, res, next) => {
+exports.protect = async (req, res, next) => {
   let token;
 
   // Check for token in headers
@@ -25,20 +26,36 @@ exports.protect = (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    if (decoded.role !== 'admin') {
-      return res.status(403).json({
+    // Get admin from token
+    const admin = await Admin.findById(decoded.id);
+    
+    if (!admin) {
+      return res.status(401).json({
         success: false,
-        message: 'Access denied. Admin role required.'
+        message: 'Admin not found'
       });
     }
 
-    req.admin = decoded;
+    req.admin = admin;
     next();
   } catch (error) {
     console.error('Token verification error:', error);
+    
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+    } else if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired'
+      });
+    }
+    
     return res.status(401).json({
       success: false,
-      message: 'Invalid token'
+      message: 'Access denied'
     });
   }
 };
