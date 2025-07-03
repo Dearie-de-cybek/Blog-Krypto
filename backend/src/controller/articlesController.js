@@ -1,5 +1,4 @@
 const Article = require('../models/Article');
-const User = require('../models/User');
 
 // @desc    Get all articles
 // @route   GET /api/articles
@@ -17,13 +16,7 @@ exports.getArticles = async (req, res) => {
       query.status = req.query.status;
     } else {
       // Only show published articles for public access
-      if (!req.user || req.user.role !== 'admin') {
-        query.status = 'published';
-      }
-    }
-    
-    if (req.query.author) {
-      query.author = req.query.author;
+      query.status = 'published';
     }
     
     if (req.query.featured) {
@@ -33,17 +26,6 @@ exports.getArticles = async (req, res) => {
     // Search functionality
     if (req.query.search) {
       query.$text = { $search: req.query.search };
-    }
-
-    // Date range filter
-    if (req.query.dateFrom || req.query.dateTo) {
-      query.publishDate = {};
-      if (req.query.dateFrom) {
-        query.publishDate.$gte = new Date(req.query.dateFrom);
-      }
-      if (req.query.dateTo) {
-        query.publishDate.$lte = new Date(req.query.dateTo);
-      }
     }
 
     // Pagination
@@ -63,15 +45,11 @@ exports.getArticles = async (req, res) => {
       case 'popular':
         sortOptions = { views: -1 };
         break;
-      case 'liked':
-        sortOptions = { 'likes.length': -1 };
-        break;
       default:
         sortOptions = { publishDate: -1 };
     }
 
     const articles = await Article.find(query)
-      .populate('author', 'name email avatar')
       .sort(sortOptions)
       .limit(limit)
       .skip(startIndex)
@@ -79,19 +57,14 @@ exports.getArticles = async (req, res) => {
 
     const total = await Article.countDocuments(query);
 
-    // Pagination info
-    const pagination = {
-      current: page,
-      total: Math.ceil(total / limit),
-      hasNext: page < Math.ceil(total / limit),
-      hasPrev: page > 1
-    };
-
     res.status(200).json({
       success: true,
       count: articles.length,
       total,
-      pagination,
+      pagination: {
+        current: page,
+        pages: Math.ceil(total / limit)
+      },
       data: articles
     });
   } catch (error) {
@@ -108,10 +81,7 @@ exports.getArticles = async (req, res) => {
 // @access  Public
 exports.getArticle = async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id)
-      .populate('author', 'name email avatar')
-      .populate('likes.user', 'name')
-      .populate('dislikes.user', 'name');
+    const article = await Article.findById(req.params.id);
 
     if (!article) {
       return res.status(404).json({
@@ -120,19 +90,9 @@ exports.getArticle = async (req, res) => {
       });
     }
 
-    // Check if user can view this article
-    if (article.status !== 'published' && (!req.user || req.user.role !== 'admin')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
-    }
-
-    // Increment view count (but not for the author)
-    if (!req.user || req.user.id !== article.author._id.toString()) {
-      article.views += 1;
-      await article.save();
-    }
+    // Increment view count
+    article.views += 1;
+    await article.save();
 
     res.status(200).json({
       success: true,
@@ -160,10 +120,7 @@ exports.getArticle = async (req, res) => {
 // @access  Public
 exports.getArticleBySlug = async (req, res) => {
   try {
-    const article = await Article.findOne({ slug: req.params.slug })
-      .populate('author', 'name email avatar')
-      .populate('likes.user', 'name')
-      .populate('dislikes.user', 'name');
+    const article = await Article.findOne({ slug: req.params.slug });
 
     if (!article) {
       return res.status(404).json({
@@ -172,19 +129,9 @@ exports.getArticleBySlug = async (req, res) => {
       });
     }
 
-    // Check if user can view this article
-    if (article.status !== 'published' && (!req.user || req.user.role !== 'admin')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
-    }
-
-    // Increment view count (but not for the author)
-    if (!req.user || req.user.id !== article.author._id.toString()) {
-      article.views += 1;
-      await article.save();
-    }
+    // Increment view count
+    article.views += 1;
+    await article.save();
 
     res.status(200).json({
       success: true,
@@ -204,13 +151,7 @@ exports.getArticleBySlug = async (req, res) => {
 // @access  Private (Admin only)
 exports.createArticle = async (req, res) => {
   try {
-    // Add author to req.body
-    req.body.author = req.user.id;
-
     const article = await Article.create(req.body);
-
-    // Populate author info
-    await article.populate('author', 'name email avatar');
 
     res.status(201).json({
       success: true,
@@ -239,7 +180,14 @@ exports.createArticle = async (req, res) => {
 // @access  Private (Admin only)
 exports.updateArticle = async (req, res) => {
   try {
-    let article = await Article.findById(req.params.id);
+    const article = await Article.findByIdAndUpdate(
+      req.params.id, 
+      req.body, 
+      {
+        new: true,
+        runValidators: true
+      }
+    );
 
     if (!article) {
       return res.status(404).json({
@@ -247,19 +195,6 @@ exports.updateArticle = async (req, res) => {
         message: 'Article not found'
       });
     }
-
-    // Make sure user is article owner or admin
-    if (article.author.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(401).json({
-        success: false,
-        message: 'Not authorized to update this article'
-      });
-    }
-
-    article = await Article.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
-    }).populate('author', 'name email avatar');
 
     res.status(200).json({
       success: true,
@@ -275,14 +210,6 @@ exports.updateArticle = async (req, res) => {
       });
     }
     
-    if (error.name === 'ValidationError') {
-      const message = Object.values(error.errors).map(val => val.message);
-      return res.status(400).json({
-        success: false,
-        message: message.join(', ')
-      });
-    }
-    
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -295,7 +222,7 @@ exports.updateArticle = async (req, res) => {
 // @access  Private (Admin only)
 exports.deleteArticle = async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id);
+    const article = await Article.findByIdAndDelete(req.params.id);
 
     if (!article) {
       return res.status(404).json({
@@ -303,16 +230,6 @@ exports.deleteArticle = async (req, res) => {
         message: 'Article not found'
       });
     }
-
-    // Make sure user is article owner or admin
-    if (article.author.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(401).json({
-        success: false,
-        message: 'Not authorized to delete this article'
-      });
-    }
-
-    await article.deleteOne();
 
     res.status(200).json({
       success: true,
@@ -335,9 +252,9 @@ exports.deleteArticle = async (req, res) => {
   }
 };
 
-// @desc    Like article
+// @desc    Like/Unlike article
 // @route   POST /api/articles/:id/like
-// @access  Private
+// @access  Public
 exports.likeArticle = async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
@@ -349,27 +266,14 @@ exports.likeArticle = async (req, res) => {
       });
     }
 
-    // Check if user already liked the article
-    const alreadyLiked = article.likes.some(like => like.user.toString() === req.user.id);
-    
-    if (alreadyLiked) {
-      // Remove like
-      article.likes = article.likes.filter(like => like.user.toString() !== req.user.id);
-    } else {
-      // Remove dislike if exists and add like
-      article.dislikes = article.dislikes.filter(dislike => dislike.user.toString() !== req.user.id);
-      article.likes.push({ user: req.user.id });
-    }
-
+    article.likes += 1;
     await article.save();
 
     res.status(200).json({
       success: true,
       data: {
-        likes: article.likes.length,
-        dislikes: article.dislikes.length,
-        userLiked: !alreadyLiked,
-        userDisliked: false
+        likes: article.likes,
+        dislikes: article.dislikes
       }
     });
   } catch (error) {
@@ -383,7 +287,7 @@ exports.likeArticle = async (req, res) => {
 
 // @desc    Dislike article
 // @route   POST /api/articles/:id/dislike
-// @access  Private
+// @access  Public
 exports.dislikeArticle = async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
@@ -395,76 +299,18 @@ exports.dislikeArticle = async (req, res) => {
       });
     }
 
-    // Check if user already disliked the article
-    const alreadyDisliked = article.dislikes.some(dislike => dislike.user.toString() === req.user.id);
-    
-    if (alreadyDisliked) {
-      // Remove dislike
-      article.dislikes = article.dislikes.filter(dislike => dislike.user.toString() !== req.user.id);
-    } else {
-      // Remove like if exists and add dislike
-      article.likes = article.likes.filter(like => like.user.toString() !== req.user.id);
-      article.dislikes.push({ user: req.user.id });
-    }
-
+    article.dislikes += 1;
     await article.save();
 
     res.status(200).json({
       success: true,
       data: {
-        likes: article.likes.length,
-        dislikes: article.dislikes.length,
-        userLiked: false,
-        userDisliked: !alreadyDisliked
+        likes: article.likes,
+        dislikes: article.dislikes
       }
     });
   } catch (error) {
     console.error('Dislike article error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
-  }
-};
-
-// @desc    Get trending articles
-// @route   GET /api/articles/trending
-// @access  Public
-exports.getTrendingArticles = async (req, res) => {
-  try {
-    const limit = parseInt(req.query.limit, 10) || 5;
-    const timeframe = req.query.timeframe || '7d'; // 1d, 7d, 30d
-
-    let dateFilter = {};
-    const now = new Date();
-    
-    switch (timeframe) {
-      case '1d':
-        dateFilter = { publishDate: { $gte: new Date(now - 24 * 60 * 60 * 1000) } };
-        break;
-      case '30d':
-        dateFilter = { publishDate: { $gte: new Date(now - 30 * 24 * 60 * 60 * 1000) } };
-        break;
-      default: // 7d
-        dateFilter = { publishDate: { $gte: new Date(now - 7 * 24 * 60 * 60 * 1000) } };
-    }
-
-    const articles = await Article.find({
-      status: 'published',
-      ...dateFilter
-    })
-      .populate('author', 'name email avatar')
-      .sort({ views: -1, 'likes.length': -1 })
-      .limit(limit)
-      .select('-content');
-
-    res.status(200).json({
-      success: true,
-      count: articles.length,
-      data: articles
-    });
-  } catch (error) {
-    console.error('Get trending articles error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'

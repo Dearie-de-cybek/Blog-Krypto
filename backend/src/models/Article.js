@@ -33,11 +33,11 @@ const articleSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Category is required'],
     enum: [
-      'Market Analysis',
+      'Home',
       'Education', 
-      'Business',
       'Events',
       'Interviews',
+      'Market Analysis',
       'Press Release'
     ]
   },
@@ -45,49 +45,25 @@ const articleSchema = new mongoose.Schema({
     type: String,
     trim: true
   }],
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
   status: {
     type: String,
-    enum: ['draft', 'published', 'scheduled'],
+    enum: ['draft', 'published'],
     default: 'draft'
   },
   publishDate: {
     type: Date,
     default: Date.now
   },
-  scheduledDate: {
-    type: Date
-  },
   views: {
     type: Number,
     default: 0
   },
-  likes: [{
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  dislikes: [{
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  readTime: {
-    type: Number, // in minutes
+  likes: {
+    type: Number,
+    default: 0
+  },
+  dislikes: {
+    type: Number,
     default: 0
   },
   isFeatured: {
@@ -101,17 +77,9 @@ const articleSchema = new mongoose.Schema({
   metaKeywords: [{
     type: String,
     trim: true
-  }],
-  socialShares: {
-    facebook: { type: Number, default: 0 },
-    twitter: { type: Number, default: 0 },
-    linkedin: { type: Number, default: 0 },
-    whatsapp: { type: Number, default: 0 }
-  }
+  }]
 }, {
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  timestamps: true
 });
 
 // Create slug from title
@@ -130,30 +98,9 @@ articleSchema.pre('save', function(next) {
   next();
 });
 
-// Calculate read time based on content
-articleSchema.pre('save', function(next) {
-  if (this.content) {
-    const wordsPerMinute = 200;
-    const wordCount = this.content.split(' ').length;
-    this.readTime = Math.ceil(wordCount / wordsPerMinute);
-  }
-  next();
-});
-
-// Virtual for like count
-articleSchema.virtual('likeCount').get(function() {
-  return this.likes.length;
-});
-
-// Virtual for dislike count
-articleSchema.virtual('dislikeCount').get(function() {
-  return this.dislikes.length;
-});
-
 // Index for better search performance
 articleSchema.index({ title: 'text', content: 'text', tags: 'text' });
 articleSchema.index({ category: 1, status: 1 });
 articleSchema.index({ publishDate: -1 });
-articleSchema.index({ views: -1 });
 
 module.exports = mongoose.model('Article', articleSchema);
