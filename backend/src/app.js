@@ -6,8 +6,6 @@ const errorHandler = require('./error/errorHandler');
 
 // Route files
 const authRoutes = require('./routes/authRoutes');
-const eventRoutes = require('./routes/eventRoutes');
-const bookingRoutes = require('./routes/bookingRoutes');
 
 // Load env vars
 require('dotenv').config();
@@ -32,13 +30,11 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Mount routers
 app.use('/api/auth', authRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/bookings', bookingRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
   res.json({
-    message: 'Event Management API is running!',
+    message: 'Blog Krypto Started!',
     version: '1.0.0'
   });
 });
