@@ -1,125 +1,170 @@
+/* eslint-disable no-unused-vars */
 import React, { useState } from 'react';
-import { Upload, Plus, X } from 'lucide-react';
+import { Upload, Image, Link } from 'lucide-react';
 
-const ImageUploader = ({ onImageInsert, onFeaturedImageChange, featuredImage }) => {
+const ImageUploader = ({ 
+  onImageInsert, 
+  onFeaturedImageChange, 
+  onFeaturedImageUpload,
+  featuredImage, 
+  uploading,
+  uploadFile 
+}) => {
   const [imageUrl, setImageUrl] = useState('');
-  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [activeTab, setActiveTab] = useState('url');
 
   const handleUrlSubmit = (e) => {
     e.preventDefault();
     if (imageUrl.trim()) {
-      onImageInsert(imageUrl);
+      onImageInsert(imageUrl.trim());
       setImageUrl('');
-      setShowUrlInput(false);
     }
   };
 
-  const handleFeaturedImageSubmit = (e) => {
-    e.preventDefault();
-    if (imageUrl.trim()) {
-      onFeaturedImageChange(imageUrl);
-      setImageUrl('');
-      setShowUrlInput(false);
-    }
-  };
-
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e, isForContent = false) => {
     const file = e.target.files[0];
-    if (file) {
-      // Create object URL for preview (in real app, you'd upload to server)
-      const objectUrl = URL.createObjectURL(file);
-      onImageInsert(objectUrl);
+    if (!file) return;
+
+    try {
+      const response = await uploadFile(file);
+      const imageUrl = response.data.fullUrl;
+      
+      if (isForContent) {
+        onImageInsert(imageUrl);
+      } else {
+        onFeaturedImageChange(imageUrl);
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      // Error handling is done in parent component
     }
+  };
+
+  const handleFeaturedImageUrl = (e) => {
+    onFeaturedImageChange(e.target.value);
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-      <label className="block text-sm font-medium text-gray-300 mb-2">
-        Featured Image
-      </label>
-      
-      <div className="space-y-3">
-        <input
-          type="url"
-          value={featuredImage}
-          onChange={(e) => onFeaturedImageChange(e.target.value)}
-          placeholder="https://example.com/image.jpg"
-          className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-        />
+    <div className="space-y-6">
+      {/* Featured Image Section */}
+      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Featured Image *
+        </label>
+        <div className="space-y-3">
+          <input
+            type="url"
+            value={featuredImage}
+            onChange={handleFeaturedImageUrl}
+            placeholder="https://example.com/image.jpg"
+            className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+          />
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-400 text-sm">or</span>
+            <label className="flex items-center space-x-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors cursor-pointer">
+              <Upload className="w-4 h-4" />
+              <span>{uploading ? 'Uploading...' : 'Upload Featured Image'}</span>
+              <input
+                type="file"
+                onChange={(e) => handleFileUpload(e, false)}
+                accept="image/*"
+                className="hidden"
+                disabled={uploading}
+              />
+            </label>
+          </div>
+          {featuredImage && (
+            <div className="space-y-2">
+              <img 
+                src={featuredImage} 
+                alt="Featured image preview" 
+                className="w-full h-48 object-cover rounded-lg border border-gray-600"
+              />
+              <p className="text-xs text-gray-400">Featured image preview</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Content Images Section */}
+      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+          <Image className="w-5 h-5" />
+          <span>Insert Images</span>
+        </h3>
         
-        <div className="flex gap-2">
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 mb-4">
           <button
-            type="button"
-            onClick={() => setShowUrlInput(!showUrlInput)}
-            className="flex items-center space-x-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm transition-colors"
+            onClick={() => setActiveTab('url')}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'url'
+                ? 'bg-yellow-500 text-black'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
           >
-            <Plus className="w-4 h-4" />
-            <span>Add to Content</span>
+            <Link className="w-4 h-4" />
+            <span>URL</span>
           </button>
-          
-          <label className="flex items-center space-x-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm transition-colors cursor-pointer">
+          <button
+            onClick={() => setActiveTab('upload')}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'upload'
+                ? 'bg-yellow-500 text-black'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
             <Upload className="w-4 h-4" />
-            <span>Upload File</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-          </label>
+            <span>Upload</span>
+          </button>
         </div>
 
-        {showUrlInput && (
-          <div className="bg-gray-900 p-4 rounded border border-gray-600">
-            <form onSubmit={handleUrlSubmit} className="space-y-3">
-              <input
-                type="url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              />
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-black rounded text-sm font-medium"
-                >
-                  Insert into Content
-                </button>
-                <button
-                  type="button"
-                  onClick={handleFeaturedImageSubmit}
-                  className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
-                >
-                  Set as Featured
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowUrlInput(false)}
-                  className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white rounded text-sm"
-                >
-                  Cancel
-                </button>
+        {/* Tab Content */}
+        {activeTab === 'url' && (
+          <form onSubmit={handleUrlSubmit} className="space-y-3">
+            <input
+              type="url"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://example.com/image.jpg"
+              className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+            />
+            <button
+              type="submit"
+              disabled={!imageUrl.trim()}
+              className="w-full px-4 py-2 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-600 disabled:text-gray-400 text-black rounded-lg transition-colors font-medium"
+            >
+              Insert Image
+            </button>
+          </form>
+        )}
+
+        {activeTab === 'upload' && (
+          <div className="space-y-3">
+            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-900 hover:bg-gray-800 transition-colors">
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <Upload className="w-8 h-8 mb-2 text-gray-400" />
+                <p className="text-sm text-gray-400">
+                  {uploading ? 'Uploading...' : 'Click to upload image'}
+                </p>
               </div>
-            </form>
+              <input
+                type="file"
+                onChange={(e) => handleFileUpload(e, true)}
+                accept="image/*"
+                className="hidden"
+                disabled={uploading}
+              />
+            </label>
           </div>
         )}
 
-        {featuredImage && (
-          <div className="relative">
-            <img 
-              src={featuredImage} 
-              alt="Preview" 
-              className="w-full h-48 object-cover rounded-lg border border-gray-600"
-            />
-            <button
-              onClick={() => onFeaturedImageChange('')}
-              className="absolute top-2 right-2 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+        <div className="mt-4 p-3 bg-gray-900 rounded-lg">
+          <p className="text-xs text-gray-400">
+            <strong>Tip:</strong> Images will be inserted at your current cursor position in the content editor. 
+            Supported formats: JPG, PNG, GIF, WebP
+          </p>
+        </div>
       </div>
     </div>
   );

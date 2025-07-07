@@ -1,70 +1,64 @@
 import React from 'react';
+import { Calendar, Tag, Star } from 'lucide-react';
 
-const PublishSettings = ({ 
-  status, 
-  setStatus, 
-  category, 
-  setCategory, 
-  tags, 
+const PublishSettings = ({
+  status,
+  setStatus,
+  category,
+  setCategory,
+  tags,
   setTags,
   publishDate,
-  setPublishDate 
+  setPublishDate,
+  isFeatured,
+  setIsFeatured
 }) => {
-  
   const categories = [
-    'Market Analysis',
+    'Home',
     'Education', 
-    'Business',
     'Events',
     'Interviews',
-    'Press Release',
-    'Technology',
-    'Opinion',
-    'Tutorial'
+    'Market Analysis',
+    'Press Release'
   ];
 
-  const statusOptions = [
-    { value: 'draft', label: 'Draft', description: 'Not visible to public' },
-    { value: 'published', label: 'Published', description: 'Live on website' },
-    { value: 'scheduled', label: 'Scheduled', description: 'Publish at specific time' }
-  ];
-
-  const handleTagInput = (e) => {
-    const value = e.target.value;
-    setTags(value);
-  };
-
-  const getTagArray = () => {
-    return tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+  const handleScheduledChange = (newStatus) => {
+    setStatus(newStatus);
+    if (newStatus !== 'scheduled') {
+      setPublishDate('');
+    } else if (!publishDate) {
+      // Set default to tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      setPublishDate(tomorrow.toISOString().slice(0, 16));
+    }
   };
 
   return (
     <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-      <h3 className="text-lg font-semibold text-white mb-4">Publish Settings</h3>
+      <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+        <Calendar className="w-5 h-5" />
+        <span>Publish Settings</span>
+      </h3>
       
       <div className="space-y-4">
         {/* Status */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            Status
+            Publication Status
           </label>
           <select
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(e) => handleScheduledChange(e.target.value)}
             className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
           >
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+            <option value="scheduled">Scheduled</option>
           </select>
-          <p className="text-xs text-gray-400 mt-1">
-            {statusOptions.find(opt => opt.value === status)?.description}
-          </p>
         </div>
 
-        {/* Publish Date for Scheduled */}
+        {/* Scheduled Date */}
         {status === 'scheduled' && (
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -74,8 +68,12 @@ const PublishSettings = ({
               type="datetime-local"
               value={publishDate}
               onChange={(e) => setPublishDate(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
               className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Article will be published automatically at this time
+            </p>
           </div>
         )}
 
@@ -88,53 +86,66 @@ const PublishSettings = ({
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            required
           >
             <option value="">Select Category</option>
             {categories.map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
-          {!category && (
-            <p className="text-xs text-red-400 mt-1">Category is required</p>
-          )}
         </div>
 
         {/* Tags */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Tags
+          <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center space-x-1">
+            <Tag className="w-4 h-4" />
+            <span>Tags</span>
           </label>
           <input
             type="text"
             value={tags}
-            onChange={handleTagInput}
-            placeholder="bitcoin, crypto, trading"
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="bitcoin, crypto, trading, analysis"
             className="w-full px-3 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500"
           />
-          <p className="text-xs text-gray-400 mt-1">Separate tags with commas</p>
-          
-          {/* Tag Preview */}
-          {getTagArray().length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {getTagArray().map((tag, index) => (
-                <span 
-                  key={index} 
-                  className="bg-yellow-500 text-black px-2 py-1 rounded text-xs"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
+          <p className="text-xs text-gray-400 mt-1">
+            Separate tags with commas. Use relevant keywords for better discoverability.
+          </p>
         </div>
 
-        {/* Word Count */}
-        <div className="pt-4 border-t border-gray-700">
-          <div className="text-sm text-gray-400">
-            <div className="flex justify-between">
-              <span>Word Count:</span>
-              <span className="text-white">{tags.split(' ').filter(word => word.length > 0).length}</span>
+        {/* Featured Article */}
+        <div className="pt-2 border-t border-gray-700">
+          <label className="flex items-center space-x-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isFeatured}
+              onChange={(e) => setIsFeatured(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-600 bg-gray-900 text-yellow-500 focus:ring-yellow-500 focus:ring-2"
+            />
+            <div className="flex items-center space-x-2">
+              <Star className="w-4 h-4 text-yellow-500" />
+              <span className="text-sm text-gray-300 font-medium">Featured Article</span>
             </div>
+          </label>
+          <p className="text-xs text-gray-400 mt-1 ml-7">
+            Featured articles appear prominently on the homepage and category pages
+          </p>
+        </div>
+
+        {/* Status Info */}
+        <div className="pt-2 border-t border-gray-700">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Current Status:</span>
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+              status === 'published' 
+                ? 'bg-green-500/20 text-green-400' 
+                : status === 'scheduled'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'bg-gray-500/20 text-gray-400'
+            }`}>
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {isFeatured && ' • Featured'}
+            </span>
           </div>
         </div>
       </div>
