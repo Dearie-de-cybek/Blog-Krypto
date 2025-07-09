@@ -2,9 +2,7 @@ import React from 'react';
 import { 
   Home, 
   FileText, 
-  Users, 
   BarChart3, 
-  Settings, 
   Plus,
   TrendingUp,
   LogOut
