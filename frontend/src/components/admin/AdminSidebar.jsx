@@ -1,24 +1,24 @@
-import React, { useState } from 'react';
-import { 
-  Home, 
-  FileText, 
-  PieChart, 
+import React, { useState } from "react";
+import {
+  Home,
+  FileText,
+  PieChart,
   Plus,
   TrendingUp,
   LogOut,
   Edit3,
   Menu,
-  X
-} from 'lucide-react';
+  X,
+} from "lucide-react";
 
 const AdminSidebar = ({ activeTab, setActiveTab, editingArticle }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const sidebarItems = [
-    { id: 'dashboard', name: 'Dashboard', icon: Home },
-    { id: 'create-post', name: 'Create Post', icon: Plus },
-    { id: 'manage-posts', name: 'Manage Posts', icon: FileText },
-    { id: 'analytics', name: 'Analytics', icon: PieChart },
+    { id: "dashboard", name: "Dashboard", icon: Home },
+    { id: "create-post", name: "Create Post", icon: Plus },
+    { id: "manage-posts", name: "Manage Posts", icon: FileText },
+    { id: "analytics", name: "Analytics", icon: PieChart },
   ];
 
   const handleTabClick = (tabId) => {
@@ -28,7 +28,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, editingArticle }) => {
 
   const handleLogout = () => {
     // Add your logout logic here
-    console.log('Logout clicked');
+    console.log("Logout clicked");
     setIsMobileMenuOpen(false);
   };
 
@@ -36,12 +36,16 @@ const AdminSidebar = ({ activeTab, setActiveTab, editingArticle }) => {
   const SidebarContent = () => (
     <>
       {/* Logo */}
-      <div className="flex items-center space-x-3 p-6 border-b border-gray-800">
-        <div className="w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
-          <TrendingUp className="w-5 h-5 text-black" />
+      <div className="flex items-center space-x-3 p-4 lg:p-6 border-b border-gray-800">
+        <div className=" lg:w-10 lg:h-10 rounded-lg flex items-center justify-center flex-shrink-0">
+          <img
+            src="/images/kryptlogo.svg"
+            alt="Krypto Extract Logo"
+            className="w-full h-full object-contain"
+          />
         </div>
-        <span className="text-xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-          Admin Panel
+        <span className="text-lg lg:text-xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent whitespace-nowrap">
+          Krypto Extract
         </span>
       </div>
 
@@ -50,25 +54,23 @@ const AdminSidebar = ({ activeTab, setActiveTab, editingArticle }) => {
         {sidebarItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
-          const isEditing = editingArticle && item.id === 'create-post';
-          
+          const isEditing = editingArticle && item.id === "create-post";
+
           return (
             <button
               key={item.id}
               onClick={() => handleTabClick(item.id)}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                 isActive
-                  ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-yellow-400'
+                  ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                  : "text-gray-300 hover:bg-gray-800 hover:text-yellow-400"
               }`}
             >
               <Icon className="w-5 h-5" />
               <span className="font-medium flex-1 text-left">
-                {isEditing ? 'Edit Post' : item.name}
+                {isEditing ? "Edit Post" : item.name}
               </span>
-              {isEditing && (
-                <Edit3 className="w-4 h-4 text-blue-400" />
-              )}
+              {isEditing && <Edit3 className="w-4 h-4 text-blue-400" />}
             </button>
           );
         })}
@@ -76,7 +78,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, editingArticle }) => {
 
       {/* Logout */}
       <div className="p-4">
-        <button 
+        <button
           onClick={handleLogout}
           className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-colors"
         >
@@ -122,11 +124,11 @@ const AdminSidebar = ({ activeTab, setActiveTab, editingArticle }) => {
       {isMobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-40">
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          
+
           {/* Sidebar */}
           <div className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-gray-900 border-r border-gray-800 transform transition-transform duration-300 ease-in-out flex flex-col">
             <SidebarContent />
