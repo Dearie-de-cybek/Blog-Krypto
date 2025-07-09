@@ -36,7 +36,7 @@ const PreviewModal = ({ isOpen, onClose, postData }) => {
           )}
           
           <div 
-            className="prose max-w-none"
+            className="prose max-w-none text-gray-900"
             dangerouslySetInnerHTML={{ __html: postData.content || 'No content yet...' }}
           />
           

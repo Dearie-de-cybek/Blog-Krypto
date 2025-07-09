@@ -1,39 +1,53 @@
-import React, { useState, useRef } from 'react';
-import { Save, Eye } from 'lucide-react';
-import articlesService from '../../services/articlesService';
-import { useUpload } from '../../hooks/useUpload';
+import React, { useState, useRef } from "react";
+import { Save, Eye } from "lucide-react";
+import articlesService from "../../services/articlesService";
+import { useUpload } from "../../hooks/useUpload";
 
 // Import components
-import PreviewModal from './PreviewModal';
-import ImageUploader from './ImageUploader';
-import FormatToolbar from './FormatToolbar';
-import PublishSettings from './PublishSettings';
-import SEOSettings from './SEOSettings';
+import PreviewModal from "./PreviewModal";
+import ImageUploader from "./ImageUploader";
+import FormatToolbar from "./FormatToolbar";
+import PublishSettings from "./PublishSettings";
+import SEOSettings from "./SEOSettings";
 
-const BlogEditor = ({ articleId = null, initialData = null }) => {
+const BlogEditor = ({
+  articleId = null,
+  initialData = null,
+  onSave = null,
+}) => {
   // Content state
-  const [title, setTitle] = useState(initialData?.title || '');
-  const [subtitle, setSubtitle] = useState(initialData?.subtitle || '');
-  const [content, setContent] = useState(initialData?.content || '');
-  const [featuredImage, setFeaturedImage] = useState(initialData?.featuredImage || '');
-  
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [subtitle, setSubtitle] = useState(initialData?.subtitle || "");
+  const [content, setContent] = useState(initialData?.content || "");
+  const [featuredImage, setFeaturedImage] = useState(
+    initialData?.featuredImage || ""
+  );
+
   // Publishing state
-  const [category, setCategory] = useState(initialData?.category || '');
-  const [tags, setTags] = useState(initialData?.tags?.join(', ') || '');
-  const [status, setStatus] = useState(initialData?.status || 'draft');
-  const [publishDate, setPublishDate] = useState(initialData?.publishDate || '');
-  const [isFeatured, setIsFeatured] = useState(initialData?.isFeatured || false);
-  
+  const [category, setCategory] = useState(initialData?.category || "");
+  const [tags, setTags] = useState(initialData?.tags?.join(", ") || "");
+  const [status, setStatus] = useState(initialData?.status || "draft");
+  const [publishDate, setPublishDate] = useState(
+    initialData?.publishDate || ""
+  );
+  const [isFeatured, setIsFeatured] = useState(
+    initialData?.isFeatured || false
+  );
+
   // SEO state
-  const [metaDescription, setMetaDescription] = useState(initialData?.metaDescription || '');
-  const [seoKeywords, setSeoKeywords] = useState(initialData?.metaKeywords?.join(', ') || '');
-  
+  const [metaDescription, setMetaDescription] = useState(
+    initialData?.metaDescription || ""
+  );
+  const [seoKeywords, setSeoKeywords] = useState(
+    initialData?.metaKeywords?.join(", ") || ""
+  );
+
   // UI state
   const [showPreview, setShowPreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
   // Refs
   const textareaRef = useRef(null);
 
@@ -41,57 +55,64 @@ const BlogEditor = ({ articleId = null, initialData = null }) => {
   const { uploadFile, uploading } = useUpload();
 
   // Handlers
-  const handleSave = async () => {
-    setIsSaving(true);
-    setError('');
-    setSuccess('');
-    
-    try {
-      // Validate required fields
-      if (!title.trim() || !content.trim() || !category || !featuredImage) {
-        throw new Error('Please fill in all required fields (title, content, category, and featured image)');
-      }
+  // Add this to the top of your BlogEditor.jsx handleSave function to call onSave after successful save:
 
-      const postData = {
-        title: title.trim(),
-        subtitle: subtitle.trim(),
-        content: content.trim(),
-        category,
-        tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0),
-        featuredImage,
-        status,
-        publishDate: status === 'scheduled' ? publishDate : null,
-        metaDescription: metaDescription.trim(),
-        metaKeywords: seoKeywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword.length > 0),
-        isFeatured,
-        createdAt: articleId ? initialData?.createdAt : new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      let response;
-      if (articleId) {
-        // Update existing article
-        response = await articlesService.updateArticle(articleId, postData);
-        setSuccess('Article updated successfully!');
-      } else {
-        // Create new article
-        response = await articlesService.createArticle(postData);
-        setSuccess('Article created successfully!');
-      }
-
-      console.log('Article saved:', response.data);
-      
-    } catch (err) {
-      setError(err.message || 'Failed to save article');
-    } finally {
-      setIsSaving(false);
+const handleSave = async () => {
+  setIsSaving(true);
+  setError('');
+  setSuccess('');
+  
+  try {
+    // Validate required fields
+    if (!title.trim() || !content.trim() || !category || !featuredImage) {
+      throw new Error('Please fill in all required fields (title, content, category, and featured image)');
     }
-  };
+
+    const postData = {
+      title: title.trim(),
+      subtitle: subtitle.trim(),
+      content: content.trim(),
+      category,
+      tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0),
+      featuredImage,
+      status,
+      publishDate: status === 'scheduled' ? publishDate : null,
+      metaDescription: metaDescription.trim(),
+      metaKeywords: seoKeywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword.length > 0),
+      isFeatured,
+      createdAt: articleId ? initialData?.createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    let response;
+    if (articleId) {
+      // Update existing article
+      response = await articlesService.updateArticle(articleId, postData);
+      setSuccess('Article updated successfully!');
+    } else {
+      // Create new article
+      response = await articlesService.createArticle(postData);
+      setSuccess('Article created successfully!');
+    }
+
+    console.log('Article saved:', response.data);
+    
+    // Call onSave callback if provided (for parent component to handle post-save actions)
+    if (onSave) {
+      onSave(response.data);
+    }
+    
+  } catch (err) {
+    setError(err.message || 'Failed to save article');
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const handlePreview = () => {
     if (articleId) {
       // If editing existing article, open published version
-      window.open(`/article/${articleId}`, '_blank');
+      window.open(`/article/${articleId}`, "_blank");
     } else {
       // If creating new article, show preview modal
       setShowPreview(true);
@@ -101,15 +122,15 @@ const BlogEditor = ({ articleId = null, initialData = null }) => {
   const handleImageInsert = (imageUrl) => {
     const imageMarkdown = `\n\n![Image](${imageUrl})\n\n`;
     const textarea = textareaRef.current;
-    
+
     if (textarea) {
       const cursorPos = textarea.selectionStart;
       const beforeText = content.substring(0, cursorPos);
       const afterText = content.substring(cursorPos);
       const newContent = beforeText + imageMarkdown + afterText;
-      
+
       setContent(newContent);
-      
+
       // Focus and set cursor position after image
       setTimeout(() => {
         textarea.focus();
@@ -123,10 +144,10 @@ const BlogEditor = ({ articleId = null, initialData = null }) => {
     try {
       const response = await uploadFile(file);
       setFeaturedImage(response.data.fullUrl);
-      setSuccess('Featured image uploaded successfully!');
-      setError('');
+      setSuccess("Featured image uploaded successfully!");
+      setError("");
     } catch (err) {
-      setError('Failed to upload featured image: ' + err.message);
+      setError("Failed to upload featured image: " + err.message);
     }
   };
 
@@ -136,38 +157,50 @@ const BlogEditor = ({ articleId = null, initialData = null }) => {
       subtitle,
       content: convertMarkdownToHtml(content),
       category,
-      tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0),
+      tags: tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0),
       featuredImage,
       status,
       metaDescription,
-      seoKeywords: seoKeywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword.length > 0),
-      isFeatured
+      seoKeywords: seoKeywords
+        .split(",")
+        .map((keyword) => keyword.trim())
+        .filter((keyword) => keyword.length > 0),
+      isFeatured,
     };
   };
 
   // Simple markdown to HTML converter
   const convertMarkdownToHtml = (markdown) => {
     return markdown
-      .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-      .replace(/\*\*\*(.*?)\*\*\*/gim, '<strong><em>$1</em></strong>')
-      .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/gim, '<em>$1</em>')
-      .replace(/~~(.*?)~~/gim, '<del>$1</del>')
-      .replace(/`(.*?)`/gim, '<code>$1</code>')
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; margin: 16px 0;" />')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-      .replace(/^- (.*$)/gim, '<li>$1</li>')
-      .replace(/^(\d+)\. (.*$)/gim, '<li>$2</li>')
-      .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-      .replace(/\n\n/gim, '</p><p>')
-      .replace(/^(.*)$/gim, '<p>$1</p>')
-      .replace(/\n/gim, '<br />');
+      .replace(/^### (.*$)/gim, "<h3>$1</h3>")
+      .replace(/^## (.*$)/gim, "<h2>$1</h2>")
+      .replace(/^# (.*$)/gim, "<h1>$1</h1>")
+      .replace(/\*\*\*(.*?)\*\*\*/gim, "<strong><em>$1</em></strong>")
+      .replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/gim, "<em>$1</em>")
+      .replace(/~~(.*?)~~/gim, "<del>$1</del>")
+      .replace(/`(.*?)`/gim, "<code>$1</code>")
+      .replace(
+        /!\[([^\]]*)\]\(([^)]+)\)/gim,
+        '<img src="$2" alt="$1" style="max-width: 100%; height: auto; margin: 16px 0;" />'
+      )
+      .replace(
+        /\[([^\]]+)\]\(([^)]+)\)/gim,
+        '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+      )
+      .replace(/^- (.*$)/gim, "<li>$1</li>")
+      .replace(/^(\d+)\. (.*$)/gim, "<li>$2</li>")
+      .replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>")
+      .replace(/\n\n/gim, "</p><p>")
+      .replace(/^(.*)$/gim, "<p>$1</p>")
+      .replace(/\n/gim, "<br />");
   };
 
   const getWordCount = () => {
-    return content.split(/\s+/).filter(word => word.length > 0).length;
+    return content.split(/\s+/).filter((word) => word.length > 0).length;
   };
 
   const getCharacterCount = () => {
@@ -181,7 +214,7 @@ const BlogEditor = ({ articleId = null, initialData = null }) => {
   // Clear messages after successful operations
   React.useEffect(() => {
     if (success) {
-      const timer = setTimeout(() => setSuccess(''), 5000);
+      const timer = setTimeout(() => setSuccess(""), 5000);
       return () => clearTimeout(timer);
     }
   }, [success]);
@@ -192,7 +225,7 @@ const BlogEditor = ({ articleId = null, initialData = null }) => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">
-            {articleId ? 'Edit Article' : 'Create New Post'}
+            {articleId ? "Edit Article" : "Create New Post"}
           </h1>
           <div className="text-sm text-gray-400 mt-1">
             Words: {getWordCount()} | Characters: {getCharacterCount()}
@@ -211,12 +244,12 @@ const BlogEditor = ({ articleId = null, initialData = null }) => {
             disabled={!isFormValid() || isSaving}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors font-medium ${
               isFormValid() && !isSaving
-                ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
-                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                ? "bg-yellow-500 hover:bg-yellow-600 text-black"
+                : "bg-gray-600 text-gray-400 cursor-not-allowed"
             }`}
           >
             <Save className="w-4 h-4" />
-            <span>{isSaving ? 'Saving...' : 'Save Article'}</span>
+            <span>{isSaving ? "Saving..." : "Save Article"}</span>
           </button>
         </div>
       </div>
@@ -227,7 +260,7 @@ const BlogEditor = ({ articleId = null, initialData = null }) => {
           {error}
         </div>
       )}
-      
+
       {success && (
         <div className="bg-green-500/20 border border-green-500/50 text-green-400 px-4 py-3 rounded-lg">
           {success}
@@ -237,7 +270,6 @@ const BlogEditor = ({ articleId = null, initialData = null }) => {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Main Editor */}
         <div className="lg:col-span-2 space-y-6">
-          
           {/* Title */}
           <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -281,12 +313,12 @@ const BlogEditor = ({ articleId = null, initialData = null }) => {
 
           {/* Content Editor */}
           <div className="bg-gray-800 rounded-lg border border-gray-700">
-            <FormatToolbar 
-              onFormat={setContent} 
-              textareaRef={textareaRef} 
+            <FormatToolbar
+              onFormat={setContent}
+              textareaRef={textareaRef}
               content={content}
             />
-            
+
             <div className="p-6">
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Article Content *
@@ -311,7 +343,6 @@ Use ** for bold text, * for italic, ## for headings
 
         {/* Sidebar */}
         <div className="space-y-6">
-          
           {/* Publish Settings */}
           <PublishSettings
             status={status}
