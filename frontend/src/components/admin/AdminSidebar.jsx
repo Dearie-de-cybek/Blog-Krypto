@@ -6,7 +6,8 @@ import {
   Plus,
   TrendingUp,
   LogOut,
-  Edit3
+  Edit3,
+  PieChart
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeTab, setActiveTab, editingArticle }) => {
@@ -14,7 +15,7 @@ const AdminSidebar = ({ activeTab, setActiveTab, editingArticle }) => {
     { id: 'dashboard', name: 'Dashboard', icon: Home },
     { id: 'create-post', name: 'Create Post', icon: Plus },
     { id: 'manage-posts', name: 'Manage Posts', icon: FileText },
-    { id: 'analytics', name: 'Analytics', icon: BarChart3 },
+    { id: 'analytics', name: 'Analytics', icon: PieChart },
   ];
 
   return (

@@ -3,10 +3,11 @@ import AdminSidebar from '../components/admin/AdminSidebar';
 import DashboardStats from '../components/admin/DashboardStats';
 import BlogEditor from '../components/admin/BlogEditor';
 import PostsManager from '../components/admin/PostsManager';
+import AnalyticsDashboard from '../components/admin/AnalyticsDashboard';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [editingArticle, setEditingArticle] = useState(null); 
+  const [editingArticle, setEditingArticle] = useState(null); // { id, data } or null
 
   const renderContent = () => {
     switch (activeTab) {
@@ -21,7 +22,6 @@ const AdminDashboard = () => {
             onSave={() => {
               // Clear editing state after save and optionally switch back to manage posts
               setEditingArticle(null);
-        
               setActiveTab('manage-posts');
             }}
           />
@@ -36,14 +36,7 @@ const AdminDashboard = () => {
         );
         
       case 'analytics':
-        return (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white">Analytics</h1>
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <p className="text-gray-300">Analytics dashboard coming soon...</p>
-            </div>
-          </div>
-        );
+        return <AnalyticsDashboard />;
         
       case 'users':
         return (
