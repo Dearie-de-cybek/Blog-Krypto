@@ -22,7 +22,8 @@ const AdminDashboard = () => {
             onSave={() => {
               // Clear editing state after save and optionally switch back to manage posts
               setEditingArticle(null);
-              setActiveTab('manage-posts');
+              // Uncomment if you want to automatically switch to manage posts after save
+              // setActiveTab('manage-posts');
             }}
           />
         );
@@ -79,29 +80,39 @@ const AdminDashboard = () => {
         editingArticle={editingArticle} // Pass editing state to show indicator
       />
       
-      <div className="ml-64 p-8">
-        {/* Show editing indicator */}
-        {editingArticle && activeTab === 'create-post' && (
-          <div className="mb-6 p-4 bg-blue-500/20 border border-blue-500/50 text-blue-400 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium">Editing Article</h3>
-                <p className="text-sm mt-1">"{editingArticle.data?.title}"</p>
-              </div>
-              <button
-                onClick={() => {
-                  setEditingArticle(null);
-                  setActiveTab('manage-posts');
-                }}
-                className="text-blue-400 hover:text-blue-300 text-sm underline"
-              >
-                Cancel Editing
-              </button>
-            </div>
-          </div>
-        )}
+      {/* Main Content Area */}
+      <div className="lg:ml-64">
+        {/* Mobile header spacing */}
+        <div className="h-16 lg:h-0" />
         
-        {renderContent()}
+        {/* Content Container */}
+        <div className="p-4 sm:p-6 lg:p-8">
+          {/* Show editing indicator */}
+          {editingArticle && activeTab === 'create-post' && (
+            <div className="mb-4 lg:mb-6 p-4 bg-blue-500/20 border border-blue-500/50 text-blue-400 rounded-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <h3 className="font-medium">Editing Article</h3>
+                  <p className="text-sm mt-1 line-clamp-1">"{editingArticle.data?.title}"</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingArticle(null);
+                    setActiveTab('manage-posts');
+                  }}
+                  className="text-blue-400 hover:text-blue-300 text-sm underline self-start sm:self-center"
+                >
+                  Cancel Editing
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Rendered Content */}
+          <div className="w-full">
+            {renderContent()}
+          </div>
+        </div>
       </div>
     </div>
   );
