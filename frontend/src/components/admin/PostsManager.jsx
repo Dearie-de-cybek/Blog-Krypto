@@ -213,7 +213,7 @@ const PostsManager = ({ setActiveTab, setEditingArticle }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Manage Posts</h1>
           <p className="text-gray-400 text-sm mt-1">
@@ -233,17 +233,18 @@ const PostsManager = ({ setActiveTab, setEditingArticle }) => {
             className="flex items-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg transition-colors font-medium"
           >
             <Plus className="w-4 h-4" />
-            <span>New Post</span>
+            <span className="hidden sm:inline">New Post</span>
+            <span className="sm:hidden">New</span>
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-gray-800 rounded-lg p-4 lg:p-6 border border-gray-700">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           
           {/* Search */}
-          <div className="relative">
+          <div className="relative sm:col-span-2 lg:col-span-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
@@ -289,7 +290,8 @@ const PostsManager = ({ setActiveTab, setEditingArticle }) => {
 
       {/* Posts Table */}
       <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-900 border-b border-gray-700">
               <tr>
@@ -404,6 +406,82 @@ const PostsManager = ({ setActiveTab, setEditingArticle }) => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="lg:hidden">
+          <div className="p-4 space-y-4">
+            {filteredArticles.map((article) => (
+              <div key={article._id} className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                {/* Article Header */}
+                <div className="flex items-start space-x-3 mb-3">
+                  {article.featuredImage && (
+                    <img 
+                      src={article.featuredImage} 
+                      alt={article.title}
+                      className="w-16 h-12 object-cover rounded border border-gray-600 flex-shrink-0"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-medium text-sm line-clamp-2 mb-1">{article.title}</h3>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="text-gray-400">{article.category}</span>
+                      <span className={`px-2 py-1 rounded-full font-medium border ${getStatusColor(article.status)}`}>
+                        {article.status.charAt(0).toUpperCase() + article.status.slice(1)}
+                      </span>
+                      {article.isFeatured && (
+                        <span className="px-2 py-1 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded font-medium">
+                          Featured
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats and Date */}
+                <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+                  <div className="flex items-center space-x-4">
+                    <span>{article.views || 0} views</span>
+                    <span>{article.likes || 0} likes</span>
+                    <span className="flex items-center space-x-1">
+                      <Calendar className="w-3 h-3" />
+                      <span>{formatDate(article.publishDate || article.createdAt)}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center space-x-2 pt-2 border-t border-gray-700">
+                  {article.status === 'published' && (
+                    <button
+                      onClick={() => handleView(article)}
+                      className="flex items-center space-x-1 px-3 py-2 text-blue-400 hover:bg-blue-500/20 rounded transition-colors text-xs"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>View</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleEdit(article)}
+                    className="flex items-center space-x-1 px-3 py-2 text-yellow-400 hover:bg-yellow-500/20 rounded transition-colors text-xs"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(article)}
+                    className="flex items-center space-x-1 px-3 py-2 text-red-400 hover:bg-red-500/20 rounded transition-colors text-xs"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Empty State */}
