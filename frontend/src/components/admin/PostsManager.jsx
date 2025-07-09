@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+/* eslint-disable no-unused-vars */
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Filter, 
@@ -6,119 +7,235 @@ import {
   Trash2, 
   Eye, 
   Calendar,
-  MoreVertical,
-  Plus
+  Plus,
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
+import articlesService from '../../services/articlesService';
 
-const PostsManager = () => {
+const PostsManager = ({ setActiveTab, setEditingArticle }) => {
+  // State for articles data
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, articleId: null, title: '' });
+  const [deleting, setDeleting] = useState(false);
 
-  const posts = [
-    {
-      id: 1,
-      title: 'Bitcoin Reaches New All-Time High as Institutional Adoption Accelerates',
-      category: 'Market Analysis',
-      status: 'Published',
-      author: 'Sarah Chen',
-      date: '2024-12-15',
-      views: 1520,
-      likes: 45,
-      image: 'https://images.unsplash.com/photo-1518544866330-4e67de92e3e8?w=100&h=60&fit=crop'
-    },
-    {
-      id: 2,
-      title: 'Understanding DeFi: A Comprehensive Guide for Beginners',
-      category: 'Education',
-      status: 'Published',
-      author: 'Michael Rodriguez',
-      date: '2024-12-14',
-      views: 892,
-      likes: 23,
-      image: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=100&h=60&fit=crop'
-    },
-    {
-      id: 3,
-      title: 'Ethereum 2.0 Staking: Complete Analysis and Future Outlook',
-      category: 'Market Analysis',
-      status: 'Draft',
-      author: 'Emma Thompson',
-      date: '2024-12-13',
-      views: 0,
-      likes: 0,
-      image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=100&h=60&fit=crop'
-    },
-    {
-      id: 4,
-      title: 'NFT Market Trends and Investment Opportunities',
-      category: 'Business',
-      status: 'Published',
-      author: 'David Kim',
-      date: '2024-12-12',
-      views: 756,
-      likes: 31,
-      image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&h=60&fit=crop'
-    },
-    {
-      id: 5,
-      title: 'Central Bank Digital Currencies: Global Implementation Status',
-      category: 'Press Release',
-      status: 'Scheduled',
-      author: 'Lisa Wang',
-      date: '2024-12-16',
-      views: 0,
-      likes: 0,
-      image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=100&h=60&fit=crop'
+  const categories = ['all', 'Home', 'Education', 'Events', 'Interviews', 'Market Analysis', 'Press Release'];
+  const statuses = ['all', 'published', 'draft'];
+
+  // Fetch articles on component mount
+  useEffect(() => {
+    fetchArticles();
+  }, []);
+
+  const fetchArticles = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch all articles (including drafts for admin)
+      const response = await articlesService.getArticles({
+        limit: 100, // Get more articles for admin view
+        status: undefined // Get both published and draft
+      });
+      
+      setArticles(response.data || []);
+    } catch (err) {
+      setError(err.message || 'Failed to fetch articles');
+      console.error('Error fetching articles:', err);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const categories = ['all', 'Market Analysis', 'Education', 'Business', 'Events', 'Interviews', 'Press Release'];
-  const statuses = ['all', 'Published', 'Draft', 'Scheduled'];
-
-  const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         post.author.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || post.category === filterCategory;
-    const matchesStatus = filterStatus === 'all' || post.status === filterStatus;
+  // Filter articles
+  const filteredArticles = articles.filter(article => {
+    const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (article.tags && article.tags.some(tag => 
+                           tag.toLowerCase().includes(searchTerm.toLowerCase())
+                         ));
+    const matchesCategory = filterCategory === 'all' || article.category === filterCategory;
+    const matchesStatus = filterStatus === 'all' || article.status === filterStatus;
     
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Published':
+      case 'published':
         return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'Draft':
+      case 'draft':
         return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      case 'Scheduled':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
       default:
         return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
 
-  const handleEdit = (postId) => {
-    console.log('Edit post:', postId);
+  const formatDate = (dateString) => {
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
   };
 
-  const handleDelete = (postId) => {
-    console.log('Delete post:', postId);
+  const handleNewPost = () => {
+    setEditingArticle(null); // Clear any existing editing data
+    setActiveTab('create-post');
   };
 
-  const handleView = (postId) => {
-    console.log('View post:', postId);
+  const handleEdit = (article) => {
+    // Pass the article data to BlogEditor
+    setEditingArticle({
+      id: article._id,
+      data: article
+    });
+    setActiveTab('create-post');
   };
+
+  const handleView = (article) => {
+    if (article.slug) {
+      window.open(`/article/${article.slug}`, '_blank');
+    } else {
+      alert('Article slug not found');
+    }
+  };
+
+  const handleDeleteClick = (article) => {
+    setDeleteModal({
+      isOpen: true,
+      articleId: article._id,
+      title: article.title
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteModal.articleId) return;
+    
+    try {
+      setDeleting(true);
+      
+      await articlesService.deleteArticle(deleteModal.articleId);
+      
+      // Remove from local state
+      setArticles(prev => prev.filter(article => article._id !== deleteModal.articleId));
+      
+      // Close modal
+      setDeleteModal({ isOpen: false, articleId: null, title: '' });
+      
+      // Show success message (you might want to add a toast notification here)
+      alert('Article deleted successfully!');
+      
+    } catch (err) {
+      console.error('Error deleting article:', err);
+      alert('Failed to delete article: ' + (err.message || 'Unknown error'));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModal({ isOpen: false, articleId: null, title: '' });
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white">Manage Posts</h1>
+          <div className="w-24 h-10 bg-gray-700 rounded-lg animate-pulse"></div>
+        </div>
+        
+        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="w-full h-10 bg-gray-700 rounded-lg animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+        
+        <div className="bg-gray-800 rounded-lg border border-gray-700 p-8">
+          <div className="flex items-center justify-center">
+            <RefreshCw className="w-8 h-8 text-yellow-400 animate-spin" />
+            <span className="ml-3 text-yellow-400 text-lg">Loading articles...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white">Manage Posts</h1>
+          <button 
+            onClick={handleNewPost}
+            className="flex items-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg transition-colors font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Post</span>
+          </button>
+        </div>
+        
+        <div className="bg-red-500/20 border border-red-500/50 text-red-400 px-6 py-4 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium">Error loading articles</h3>
+              <p className="text-sm mt-1">{error}</p>
+            </div>
+            <button
+              onClick={fetchArticles}
+              className="bg-red-500/20 hover:bg-red-500/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Manage Posts</h1>
-        <button className="flex items-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg transition-colors font-medium">
-          <Plus className="w-4 h-4" />
-          <span>New Post</span>
-        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Manage Posts</h1>
+          <p className="text-gray-400 text-sm mt-1">
+            {articles.length} total articles • {filteredArticles.length} shown
+          </p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={fetchArticles}
+            className="p-2 text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10 rounded-lg transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
+          <button 
+            onClick={handleNewPost}
+            className="flex items-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg transition-colors font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Post</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -162,7 +279,7 @@ const PostsManager = () => {
             >
               {statuses.map((status) => (
                 <option key={status} value={status}>
-                  {status === 'all' ? 'All Status' : status}
+                  {status === 'all' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}
                 </option>
               ))}
             </select>
@@ -179,84 +296,105 @@ const PostsManager = () => {
                 <th className="text-left p-4 text-gray-300 font-medium">Post</th>
                 <th className="text-left p-4 text-gray-300 font-medium">Category</th>
                 <th className="text-left p-4 text-gray-300 font-medium">Status</th>
-                <th className="text-left p-4 text-gray-300 font-medium">Author</th>
                 <th className="text-left p-4 text-gray-300 font-medium">Date</th>
                 <th className="text-left p-4 text-gray-300 font-medium">Stats</th>
                 <th className="text-left p-4 text-gray-300 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {filteredPosts.map((post) => (
-                <tr key={post.id} className="hover:bg-gray-750 transition-colors">
+              {filteredArticles.map((article) => (
+                <tr key={article._id} className="hover:bg-gray-750 transition-colors">
                   
                   {/* Post Info */}
                   <td className="p-4">
                     <div className="flex items-center space-x-3">
-                      <img 
-                        src={post.image} 
-                        alt={post.title}
-                        className="w-12 h-8 object-cover rounded border border-gray-600"
-                      />
+                      {article.featuredImage && (
+                        <img 
+                          src={article.featuredImage} 
+                          alt={article.title}
+                          className="w-12 h-8 object-cover rounded border border-gray-600"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      )}
                       <div className="max-w-xs">
-                        <h3 className="text-white font-medium truncate">{post.title}</h3>
+                        <h3 className="text-white font-medium truncate">{article.title}</h3>
+                        {article.subtitle && (
+                          <p className="text-gray-400 text-xs truncate mt-1">{article.subtitle}</p>
+                        )}
                       </div>
                     </div>
                   </td>
 
                   {/* Category */}
                   <td className="p-4">
-                    <span className="text-gray-300 text-sm">{post.category}</span>
+                    <span className="text-gray-300 text-sm">{article.category}</span>
                   </td>
 
                   {/* Status */}
                   <td className="p-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(post.status)}`}>
-                      {post.status}
-                    </span>
-                  </td>
-
-                  {/* Author */}
-                  <td className="p-4">
-                    <span className="text-gray-300 text-sm">{post.author}</span>
+                    <div className="flex flex-col space-y-1">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(article.status)}`}>
+                        {article.status.charAt(0).toUpperCase() + article.status.slice(1)}
+                      </span>
+                      {article.isFeatured && (
+                        <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded text-xs font-medium">
+                          Featured
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* Date */}
                   <td className="p-4">
-                    <div className="flex items-center space-x-1 text-gray-400 text-sm">
-                      <Calendar className="w-3 h-3" />
-                      <span>{post.date}</span>
+                    <div className="text-gray-400 text-sm">
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>{formatDate(article.publishDate || article.createdAt)}</span>
+                      </div>
+                      {article.updatedAt && article.updatedAt !== article.createdAt && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Updated {formatDate(article.updatedAt)}
+                        </div>
+                      )}
                     </div>
                   </td>
 
                   {/* Stats */}
                   <td className="p-4">
                     <div className="text-sm text-gray-400">
-                      <div>{post.views} views</div>
-                      <div>{post.likes} likes</div>
+                      <div>{article.views || 0} views</div>
+                      <div>{article.likes || 0} likes</div>
+                      {article.dislikes > 0 && (
+                        <div>{article.dislikes} dislikes</div>
+                      )}
                     </div>
                   </td>
 
                   {/* Actions */}
                   <td className="p-4">
                     <div className="flex items-center space-x-2">
+                      {article.status === 'published' && (
+                        <button
+                          onClick={() => handleView(article)}
+                          className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/20 rounded transition-colors"
+                          title="View Published Article"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleView(post.id)}
-                        className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/20 rounded transition-colors"
-                        title="View"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleEdit(post.id)}
+                        onClick={() => handleEdit(article)}
                         className="p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/20 rounded transition-colors"
-                        title="Edit"
+                        title="Edit Article"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(post.id)}
+                        onClick={() => handleDeleteClick(article)}
                         className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/20 rounded transition-colors"
-                        title="Delete"
+                        title="Delete Article"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -269,12 +407,75 @@ const PostsManager = () => {
         </div>
 
         {/* Empty State */}
-        {filteredPosts.length === 0 && (
+        {filteredArticles.length === 0 && !loading && (
           <div className="text-center py-12">
-            <p className="text-gray-400">No posts found matching your criteria.</p>
+            <div className="text-gray-400 mb-4">
+              {articles.length === 0 ? (
+                <>
+                  <h3 className="text-lg font-medium mb-2">No articles yet</h3>
+                  <p>Create your first article to get started</p>
+                </>
+              ) : (
+                <p>No articles found matching your criteria.</p>
+              )}
+            </div>
+            {articles.length === 0 && (
+              <button 
+                onClick={handleNewPost}
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg transition-colors font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create First Article</span>
+              </button>
+            )}
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full border border-gray-700">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Delete Article</h3>
+                <p className="text-gray-400 text-sm">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to delete "<span className="font-medium">{deleteModal.title}</span>"?
+            </p>
+            
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleDeleteCancel}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
+              >
+                {deleting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
