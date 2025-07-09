@@ -5,8 +5,6 @@ const DashboardStats = () => {
   const stats = [
     { title: 'Total Posts', value: '247', change: '+12%', icon: FileText, color: 'blue' },
     { title: 'Total Views', value: '1.2M', change: '+8.5%', icon: Eye, color: 'green' },
-    { title: 'Active Users', value: '15.8K', change: '+23%', icon: Users, color: 'purple' },
-    { title: 'Revenue', value: '$45.2K', change: '+15%', icon: TrendingUp, color: 'yellow' }
   ];
 
   const recentPosts = [

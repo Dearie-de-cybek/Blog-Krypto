@@ -16,8 +16,6 @@ const AdminSidebar = ({ activeTab, setActiveTab }) => {
     { id: 'create-post', name: 'Create Post', icon: Plus },
     { id: 'manage-posts', name: 'Manage Posts', icon: FileText },
     { id: 'analytics', name: 'Analytics', icon: BarChart3 },
-    { id: 'users', name: 'Users', icon: Users },
-    { id: 'settings', name: 'Settings', icon: Settings }
   ];
 
   return (
