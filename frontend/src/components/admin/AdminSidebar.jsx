@@ -5,10 +5,11 @@ import {
   BarChart3, 
   Plus,
   TrendingUp,
-  LogOut
+  LogOut,
+  Edit3
 } from 'lucide-react';
 
-const AdminSidebar = ({ activeTab, setActiveTab }) => {
+const AdminSidebar = ({ activeTab, setActiveTab, editingArticle }) => {
   const sidebarItems = [
     { id: 'dashboard', name: 'Dashboard', icon: Home },
     { id: 'create-post', name: 'Create Post', icon: Plus },
@@ -33,6 +34,7 @@ const AdminSidebar = ({ activeTab, setActiveTab }) => {
         {sidebarItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
+          const isEditing = editingArticle && item.id === 'create-post';
           
           return (
             <button
@@ -45,7 +47,12 @@ const AdminSidebar = ({ activeTab, setActiveTab }) => {
               }`}
             >
               <Icon className="w-5 h-5" />
-              <span className="font-medium">{item.name}</span>
+              <span className="font-medium flex-1 text-left">
+                {isEditing ? 'Edit Post' : item.name}
+              </span>
+              {isEditing && (
+                <Edit3 className="w-4 h-4 text-blue-400" />
+              )}
             </button>
           );
         })}
