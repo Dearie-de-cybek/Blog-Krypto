@@ -8,9 +8,9 @@ const PreviewModal = ({ isOpen, onClose, postData }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h2 className="text-xl font-bold">Preview</h2>
+          <h2 className="text-xl font-bold text-amber-400">Preview</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-amber-400" />
           </button>
         </div>
         
@@ -19,7 +19,7 @@ const PreviewModal = ({ isOpen, onClose, postData }) => {
             <img 
               src={postData.featuredImage} 
               alt="Featured" 
-              className="w-full h-64 object-cover rounded-lg mb-6"
+              className="w-full h-64 object-cover rounded-lg mb-6 text-amber-400"
             />
           )}
           
@@ -29,7 +29,7 @@ const PreviewModal = ({ isOpen, onClose, postData }) => {
             </span>
           </div>
           
-          <h1 className="text-3xl font-bold mb-4">{postData.title || 'Untitled'}</h1>
+          <h1 className="text-3xl font-bold mb-4 text-amber-400">{postData.title || 'Untitled'}</h1>
           
           {postData.subtitle && (
             <p className="text-xl text-gray-600 mb-6">{postData.subtitle}</p>
