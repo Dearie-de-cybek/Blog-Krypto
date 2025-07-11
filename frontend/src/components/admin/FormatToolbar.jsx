@@ -289,3 +289,5 @@ const FormatToolbar = ({ onFormat, textareaRef, content, onImageInsert }) => {
     </div>
   );
 };
+
+export default FormatToolbar;
