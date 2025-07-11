@@ -11,7 +11,7 @@ const PreviewModal = ({ isOpen, onClose, postData }) => {
     // Basic cleanup for better display
     return htmlContent
       .replace(/\n\s*\n/g, '<br/><br/>') 
-      .replace(/\n/g, '<br/>')
+      .replace(/\n/g, '<br/>') 
       .replace(/<br\/><br\/>/g, '</p><p>');
   };
 
