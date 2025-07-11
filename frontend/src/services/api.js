@@ -1,18 +1,18 @@
 import axios from 'axios';
 
-// Create axios instance
+// Create axios instance with base configuration
 const API = axios.create({
   baseURL:  'http://localhost:8080/api',
-  withCredentials: true,
+  timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
-  },
+    'Content-Type': 'application/json'
+  }
 });
 
-// Add auth token to requests if available
+// Request interceptor to add auth token
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('adminToken');
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -23,15 +23,19 @@ API.interceptors.request.use(
   }
 );
 
-// Handle response errors
+// Response interceptor to handle errors
 API.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('adminToken');
-      window.location.href = '/admin/login';
+      // Handle unauthorized access
+      localStorage.removeItem('token');
+      // You might want to redirect to login page here
+      // window.location.href = '/login';
     }
+    
     return Promise.reject(error);
   }
 );

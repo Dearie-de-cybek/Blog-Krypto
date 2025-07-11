@@ -54,60 +54,104 @@ const BlogEditor = ({
   // Backend integration
   const { uploadFile, uploading } = useUpload();
 
-  // Handlers
-  // Add this to the top of your BlogEditor.jsx handleSave function to call onSave after successful save:
+  // Enhanced image insertion handler
+  const handleImageInsert = (imageData) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
 
-const handleSave = async () => {
-  setIsSaving(true);
-  setError('');
-  setSuccess('');
-  
-  try {
-    // Validate required fields
-    if (!title.trim() || !content.trim() || !category || !featuredImage) {
-      throw new Error('Please fill in all required fields (title, content, category, and featured image)');
-    }
+    let insertHTML = '';
 
-    const postData = {
-      title: title.trim(),
-      subtitle: subtitle.trim(),
-      content: content.trim(),
-      category,
-      tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0),
-      featuredImage,
-      status,
-      publishDate: status === 'scheduled' ? publishDate : null,
-      metaDescription: metaDescription.trim(),
-      metaKeywords: seoKeywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword.length > 0),
-      isFeatured,
-      createdAt: articleId ? initialData?.createdAt : new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    let response;
-    if (articleId) {
-      // Update existing article
-      response = await articlesService.updateArticle(articleId, postData);
-      setSuccess('Article updated successfully!');
+    // Check if imageData is a file (from toolbar) or HTML string (from ImageUploader)
+    if (imageData instanceof File) {
+      // Handle file upload from toolbar
+      uploadFile(imageData)
+        .then(response => {
+          const imageUrl = response.data.fullUrl;
+          insertHTML = `<img src="${imageUrl}" alt="${imageData.name}" style="max-width: 100%; height: auto; margin: 16px 0;" />`;
+          insertAtCursor(insertHTML);
+        })
+        .catch(err => {
+          setError("Failed to upload image: " + err.message);
+        });
+      return;
     } else {
-      // Create new article
-      response = await articlesService.createArticle(postData);
-      setSuccess('Article created successfully!');
+      // Handle HTML string from ImageUploader
+      insertHTML = imageData;
     }
 
-    console.log('Article saved:', response.data);
+    insertAtCursor(insertHTML);
+  };
+
+  const insertAtCursor = (htmlContent) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const cursorPos = textarea.selectionStart;
+    const beforeText = content.substring(0, cursorPos);
+    const afterText = content.substring(cursorPos);
+    const newContent = beforeText + '\n' + htmlContent + '\n' + afterText;
+
+    setContent(newContent);
+
+    // Focus and set cursor position after inserted content
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = cursorPos + htmlContent.length + 2;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setError('');
+    setSuccess('');
     
-    // Call onSave callback if provided (for parent component to handle post-save actions)
-    if (onSave) {
-      onSave(response.data);
+    try {
+      // Validate required fields
+      if (!title.trim() || !content.trim() || !category || !featuredImage) {
+        throw new Error('Please fill in all required fields (title, content, category, and featured image)');
+      }
+
+      const postData = {
+        title: title.trim(),
+        subtitle: subtitle.trim(),
+        content: content.trim(),
+        category,
+        tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0),
+        featuredImage,
+        status,
+        publishDate: status === 'scheduled' ? publishDate : null,
+        metaDescription: metaDescription.trim(),
+        metaKeywords: seoKeywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword.length > 0),
+        isFeatured,
+        createdAt: articleId ? initialData?.createdAt : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      let response;
+      if (articleId) {
+        // Update existing article
+        response = await articlesService.updateArticle(articleId, postData);
+        setSuccess('Article updated successfully!');
+      } else {
+        // Create new article
+        response = await articlesService.createArticle(postData);
+        setSuccess('Article created successfully!');
+      }
+
+      console.log('Article saved:', response.data);
+      
+      // Call onSave callback if provided (for parent component to handle post-save actions)
+      if (onSave) {
+        onSave(response.data);
+      }
+      
+    } catch (err) {
+      setError(err.message || 'Failed to save article');
+    } finally {
+      setIsSaving(false);
     }
-    
-  } catch (err) {
-    setError(err.message || 'Failed to save article');
-  } finally {
-    setIsSaving(false);
-  }
-};
+  };
 
   const handlePreview = () => {
     if (articleId) {
@@ -116,27 +160,6 @@ const handleSave = async () => {
     } else {
       // If creating new article, show preview modal
       setShowPreview(true);
-    }
-  };
-
-  const handleImageInsert = (imageUrl) => {
-    const imageMarkdown = `\n\n![Image](${imageUrl})\n\n`;
-    const textarea = textareaRef.current;
-
-    if (textarea) {
-      const cursorPos = textarea.selectionStart;
-      const beforeText = content.substring(0, cursorPos);
-      const afterText = content.substring(cursorPos);
-      const newContent = beforeText + imageMarkdown + afterText;
-
-      setContent(newContent);
-
-      // Focus and set cursor position after image
-      setTimeout(() => {
-        textarea.focus();
-        const newCursorPos = cursorPos + imageMarkdown.length;
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-      }, 0);
     }
   };
 
@@ -155,7 +178,7 @@ const handleSave = async () => {
     return {
       title,
       subtitle,
-      content: convertMarkdownToHtml(content),
+      content: content, // Keep as HTML since we're now using HTML formatting
       category,
       tags: tags
         .split(",")
@@ -172,35 +195,10 @@ const handleSave = async () => {
     };
   };
 
-  // Simple markdown to HTML converter
-  const convertMarkdownToHtml = (markdown) => {
-    return markdown
-      .replace(/^### (.*$)/gim, "<h3>$1</h3>")
-      .replace(/^## (.*$)/gim, "<h2>$1</h2>")
-      .replace(/^# (.*$)/gim, "<h1>$1</h1>")
-      .replace(/\*\*\*(.*?)\*\*\*/gim, "<strong><em>$1</em></strong>")
-      .replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>")
-      .replace(/\*(.*?)\*/gim, "<em>$1</em>")
-      .replace(/~~(.*?)~~/gim, "<del>$1</del>")
-      .replace(/`(.*?)`/gim, "<code>$1</code>")
-      .replace(
-        /!\[([^\]]*)\]\(([^)]+)\)/gim,
-        '<img src="$2" alt="$1" style="max-width: 100%; height: auto; margin: 16px 0;" />'
-      )
-      .replace(
-        /\[([^\]]+)\]\(([^)]+)\)/gim,
-        '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
-      )
-      .replace(/^- (.*$)/gim, "<li>$1</li>")
-      .replace(/^(\d+)\. (.*$)/gim, "<li>$2</li>")
-      .replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>")
-      .replace(/\n\n/gim, "</p><p>")
-      .replace(/^(.*)$/gim, "<p>$1</p>")
-      .replace(/\n/gim, "<br />");
-  };
-
   const getWordCount = () => {
-    return content.split(/\s+/).filter((word) => word.length > 0).length;
+    // Strip HTML tags for accurate word count
+    const textOnly = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return textOnly.split(/\s+/).filter((word) => word.length > 0).length;
   };
 
   const getCharacterCount = () => {
@@ -317,6 +315,7 @@ const handleSave = async () => {
               onFormat={setContent}
               textareaRef={textareaRef}
               content={content}
+              onImageInsert={handleImageInsert}
             />
 
             <div className="p-6">
@@ -327,16 +326,21 @@ const handleSave = async () => {
                 ref={textareaRef}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="Write your article content here... 
+                placeholder="Start writing your article content here...
 
-Use ** for bold text, * for italic, ## for headings
-- For bullet lists
-1. For numbered lists
-[link text](url) for links
-![alt text](image-url) for images"
+Use the formatting toolbar above to add:
+• Bold and italic text
+• Headings and lists
+• Links and images
+• Videos and other media
+
+You can also type HTML directly for advanced formatting."
                 rows={25}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none font-mono text-sm"
+                className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none text-sm leading-relaxed"
               />
+              <div className="mt-2 text-xs text-gray-400">
+                Rich HTML content editor - Use toolbar buttons or type HTML directly
+              </div>
             </div>
           </div>
         </div>
