@@ -26,7 +26,9 @@ const RichTextEditor = ({
   initialContent = '', 
   onChange, 
   placeholder = "Start writing your blog post...",
-  className = "" 
+  className = "",
+  uploadFile = null,
+  uploading = false 
 }) => {
   const [content, setContent] = useState(initialContent);
   const [selectedFormat, setSelectedFormat] = useState(new Set());
@@ -82,35 +84,79 @@ const RichTextEditor = ({
   }, [updateFormatState]);
 
   // Handle image upload
-  const handleImageUpload = useCallback((event) => {
+  const handleImageUpload = useCallback(async (event) => {
     const file = event.target.files[0];
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = `<img src="${e.target.result}" style="max-width: 100%; height: auto; margin: 10px 0;" alt="Uploaded image" />`;
-        executeCommand('insertHTML', img);
-      };
-      reader.readAsDataURL(file);
+      if (uploadFile) {
+        try {
+          const response = await uploadFile(file);
+          const imageUrl = response.fullUrl || response.url || response.data?.fullUrl;
+          const img = `<img src="${imageUrl}" style="max-width: 100%; height: auto; margin: 10px 0;" alt="Uploaded image" />`;
+          executeCommand('insertHTML', img);
+        } catch (error) {
+          console.error('Failed to upload image:', error);
+          // Fallback to base64 if upload fails
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = `<img src="${e.target.result}" style="max-width: 100%; height: auto; margin: 10px 0;" alt="Uploaded image" />`;
+            executeCommand('insertHTML', img);
+          };
+          reader.readAsDataURL(file);
+        }
+      } else {
+        // Fallback to base64 if no upload function provided
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = `<img src="${e.target.result}" style="max-width: 100%; height: auto; margin: 10px 0;" alt="Uploaded image" />`;
+          executeCommand('insertHTML', img);
+        };
+        reader.readAsDataURL(file);
+      }
     }
     event.target.value = '';
-  }, [executeCommand]);
+  }, [executeCommand, uploadFile]);
 
   // Handle video upload
-  const handleVideoUpload = useCallback((event) => {
+  const handleVideoUpload = useCallback(async (event) => {
     const file = event.target.files[0];
     if (file && file.type.startsWith('video/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const video = `<video controls style="max-width: 100%; height: auto; margin: 10px 0;">
-          <source src="${e.target.result}" type="${file.type}">
-          Your browser does not support the video tag.
-        </video>`;
-        executeCommand('insertHTML', video);
-      };
-      reader.readAsDataURL(file);
+      if (uploadFile) {
+        try {
+          const response = await uploadFile(file);
+          const videoUrl = response.fullUrl || response.url || response.data?.fullUrl;
+          const video = `<video controls style="max-width: 100%; height: auto; margin: 10px 0;">
+            <source src="${videoUrl}" type="${file.type}">
+            Your browser does not support the video tag.
+          </video>`;
+          executeCommand('insertHTML', video);
+        } catch (error) {
+          console.error('Failed to upload video:', error);
+          // Fallback to base64 if upload fails
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const video = `<video controls style="max-width: 100%; height: auto; margin: 10px 0;">
+              <source src="${e.target.result}" type="${file.type}">
+              Your browser does not support the video tag.
+            </video>`;
+            executeCommand('insertHTML', video);
+          };
+          reader.readAsDataURL(file);
+        }
+      } else {
+        // Fallback to base64 if no upload function provided
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const video = `<video controls style="max-width: 100%; height: auto; margin: 10px 0;">
+            <source src="${e.target.result}" type="${file.type}">
+            Your browser does not support the video tag.
+          </video>`;
+          executeCommand('insertHTML', video);
+        };
+        reader.readAsDataURL(file);
+      }
     }
     event.target.value = '';
-  }, [executeCommand]);
+  }, [executeCommand, uploadFile]);
 
   // Handle link insertion
   const insertLink = useCallback(() => {
@@ -140,7 +186,7 @@ const RichTextEditor = ({
   );
 
   return (
-    <div className={`border border-gray-300 rounded-lg overflow-hidden ${className}`}>
+    <div className={`border border-gray-300 rounded-lg overflow-hidden bg-white ${className}`}>
       {/* Toolbar */}
       <div className="bg-gray-50 border-b border-gray-200 p-2 flex flex-wrap gap-1">
         {/* Heading Dropdown */}
@@ -247,12 +293,14 @@ const RichTextEditor = ({
         <ToolbarButton
           onClick={() => fileInputRef.current?.click()}
           icon={Image}
-          title="Insert Image"
+          title={uploading ? "Uploading..." : "Insert Image"}
+          className={uploading ? "opacity-50 cursor-not-allowed" : ""}
         />
         <ToolbarButton
           onClick={() => videoInputRef.current?.click()}
           icon={Video}
-          title="Insert Video"
+          title={uploading ? "Uploading..." : "Insert Video"}
+          className={uploading ? "opacity-50 cursor-not-allowed" : ""}
         />
         <ToolbarButton
           onClick={insertLink}
@@ -296,6 +344,7 @@ const RichTextEditor = ({
         accept="image/*"
         onChange={handleImageUpload}
         className="hidden"
+        disabled={uploading}
       />
       <input
         ref={videoInputRef}
@@ -303,6 +352,7 @@ const RichTextEditor = ({
         accept="video/*"
         onChange={handleVideoUpload}
         className="hidden"
+        disabled={uploading}
       />
 
       {/* Editor */}
@@ -312,7 +362,7 @@ const RichTextEditor = ({
         onInput={handleContentChange}
         onKeyUp={updateFormatState}
         onMouseUp={updateFormatState}
-        className="p-4 min-h-[300px] max-h-[600px] overflow-y-auto focus:outline-none"
+        className="p-4 min-h-[300px] max-h-[600px] overflow-y-auto focus:outline-none bg-white text-gray-900"
         style={{
           lineHeight: '1.6',
           fontSize: '16px'
@@ -330,30 +380,42 @@ const RichTextEditor = ({
         }}
       />
 
+      {/* Upload indicator */}
+      {uploading && (
+        <div className="bg-blue-50 border-t border-blue-200 p-2 text-sm text-blue-600 flex items-center">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+          Uploading file...
+        </div>
+      )}
+
       {/* Custom styles for the editor */}
       <style jsx>{`
         [contenteditable]:empty:before {
           content: attr(placeholder);
           color: #9ca3af;
           pointer-events: none;
+          white-space: pre-line;
         }
         
         [contenteditable] h1 {
           font-size: 2em;
           font-weight: bold;
           margin: 0.67em 0;
+          color: #111827;
         }
         
         [contenteditable] h2 {
           font-size: 1.5em;
           font-weight: bold;
           margin: 0.75em 0;
+          color: #111827;
         }
         
         [contenteditable] h3 {
           font-size: 1.17em;
           font-weight: bold;
           margin: 0.83em 0;
+          color: #111827;
         }
         
         [contenteditable] blockquote {
@@ -362,6 +424,9 @@ const RichTextEditor = ({
           margin: 1rem 0;
           font-style: italic;
           color: #6b7280;
+          background-color: #f9fafb;
+          padding: 1rem;
+          border-radius: 0.375rem;
         }
         
         [contenteditable] pre {
@@ -371,6 +436,7 @@ const RichTextEditor = ({
           overflow-x: auto;
           font-family: 'Courier New', monospace;
           margin: 1rem 0;
+          border: 1px solid #e5e7eb;
         }
         
         [contenteditable] ul, [contenteditable] ol {
@@ -389,6 +455,16 @@ const RichTextEditor = ({
         
         [contenteditable] a:hover {
           color: #1d4ed8;
+        }
+        
+        [contenteditable] img {
+          border-radius: 0.375rem;
+          box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+        
+        [contenteditable] video {
+          border-radius: 0.375rem;
+          box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
         }
       `}</style>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { Save, Eye } from "lucide-react";
 import articlesService from "../../services/articlesService";
 import { useUpload } from "../../hooks/useUpload";
@@ -6,9 +6,9 @@ import { useUpload } from "../../hooks/useUpload";
 // Import components
 import PreviewModal from "./PreviewModal";
 import ImageUploader from "./ImageUploader";
-import FormatToolbar from "./FormatToolbar";
 import PublishSettings from "./PublishSettings";
 import SEOSettings from "./SEOSettings";
+import RichTextEditor from "./RichTextEditor"; // Import the new rich text editor
 
 const BlogEditor = ({
   articleId = null,
@@ -48,58 +48,8 @@ const BlogEditor = ({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Refs
-  const textareaRef = useRef(null);
-
   // Backend integration
   const { uploadFile, uploading } = useUpload();
-
-  // Enhanced image insertion handler
-  const handleImageInsert = (imageData) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    let insertHTML = '';
-
-    // Check if imageData is a file (from toolbar) or HTML string (from ImageUploader)
-    if (imageData instanceof File) {
-      // Handle file upload from toolbar
-      uploadFile(imageData)
-        .then(response => {
-          const imageUrl = response.data.fullUrl;
-          insertHTML = `<img src="${imageUrl}" alt="${imageData.name}" style="max-width: 100%; height: auto; margin: 16px 0;" />`;
-          insertAtCursor(insertHTML);
-        })
-        .catch(err => {
-          setError("Failed to upload image: " + err.message);
-        });
-      return;
-    } else {
-      // Handle HTML string from ImageUploader
-      insertHTML = imageData;
-    }
-
-    insertAtCursor(insertHTML);
-  };
-
-  const insertAtCursor = (htmlContent) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const cursorPos = textarea.selectionStart;
-    const beforeText = content.substring(0, cursorPos);
-    const afterText = content.substring(cursorPos);
-    const newContent = beforeText + '\n' + htmlContent + '\n' + afterText;
-
-    setContent(newContent);
-
-    // Focus and set cursor position after inserted content
-    setTimeout(() => {
-      textarea.focus();
-      const newCursorPos = cursorPos + htmlContent.length + 2;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -166,7 +116,7 @@ const BlogEditor = ({
   const handleFeaturedImageUpload = async (file) => {
     try {
       const response = await uploadFile(file);
-      setFeaturedImage(response.data.fullUrl);
+      setFeaturedImage(response.data?.fullUrl || response.fullUrl);
       setSuccess("Featured image uploaded successfully!");
       setError("");
     } catch (err) {
@@ -301,7 +251,6 @@ const BlogEditor = ({
 
           {/* Featured Image */}
           <ImageUploader
-            onImageInsert={handleImageInsert}
             onFeaturedImageChange={setFeaturedImage}
             onFeaturedImageUpload={handleFeaturedImageUpload}
             featuredImage={featuredImage}
@@ -309,38 +258,29 @@ const BlogEditor = ({
             uploadFile={uploadFile}
           />
 
-          {/* Content Editor */}
-          <div className="bg-gray-800 rounded-lg border border-gray-700">
-            <FormatToolbar
-              onFormat={setContent}
-              textareaRef={textareaRef}
-              content={content}
-              onImageInsert={handleImageInsert}
-            />
+          {/* Rich Text Editor */}
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <label className="block text-sm font-medium text-gray-300 mb-4">
+              Article Content *
+            </label>
+            <RichTextEditor
+              initialContent={content}
+              onChange={setContent}
+              placeholder="Start writing your article content here...
 
-            <div className="p-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Article Content *
-              </label>
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Start writing your article content here...
-
-Use the formatting toolbar above to add:
+Use the formatting toolbar to add:
 • Bold and italic text
 • Headings and lists
 • Links and images
 • Videos and other media
 
-You can also type HTML directly for advanced formatting."
-                rows={25}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none text-sm leading-relaxed"
-              />
-              <div className="mt-2 text-xs text-gray-400">
-                Rich HTML content editor - Use toolbar buttons or type HTML directly
-              </div>
+The editor supports rich HTML formatting for professional blog posts."
+              uploadFile={uploadFile}
+              uploading={uploading}
+              className="border-gray-600 bg-gray-900"
+            />
+            <div className="mt-2 text-xs text-gray-400">
+              Rich text editor with toolbar formatting and media upload support
             </div>
           </div>
         </div>
