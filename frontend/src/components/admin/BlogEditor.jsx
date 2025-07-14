@@ -1,12 +1,13 @@
 import React, { useState, useRef } from "react";
 import { Save, Eye } from "lucide-react";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import articlesService from "../../services/articlesService";
 import { useUpload } from "../../hooks/useUpload";
 
 // Import components
 import PreviewModal from "./PreviewModal";
 import ImageUploader from "./ImageUploader";
-import FormatToolbar from "./FormatToolbar";
 import PublishSettings from "./PublishSettings";
 import SEOSettings from "./SEOSettings";
 
@@ -49,56 +50,131 @@ const BlogEditor = ({
   const [success, setSuccess] = useState("");
 
   // Refs
-  const textareaRef = useRef(null);
+  const quillRef = useRef(null);
 
   // Backend integration
   const { uploadFile, uploading } = useUpload();
 
-  // Enhanced image insertion handler
-  const handleImageInsert = (imageData) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    let insertHTML = '';
-
-    // Check if imageData is a file (from toolbar) or HTML string (from ImageUploader)
-    if (imageData instanceof File) {
-      // Handle file upload from toolbar
-      uploadFile(imageData)
-        .then(response => {
-          const imageUrl = response.data.fullUrl;
-          insertHTML = `<img src="${imageUrl}" alt="${imageData.name}" style="max-width: 100%; height: auto; margin: 16px 0;" />`;
-          insertAtCursor(insertHTML);
-        })
-        .catch(err => {
-          setError("Failed to upload image: " + err.message);
-        });
-      return;
-    } else {
-      // Handle HTML string from ImageUploader
-      insertHTML = imageData;
+  // React Quill configuration
+  const quillModules = {
+    toolbar: {
+      container: [
+        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'indent': '-1'}, { 'indent': '+1' }],
+        [{ 'align': [] }],
+        ['blockquote', 'code-block'],
+        ['link', 'image', 'video'],
+        ['clean']
+      ],
+      handlers: {
+        image: handleImageClick,
+        video: handleVideoClick
+      }
+    },
+    clipboard: {
+      matchVisual: false,
     }
-
-    insertAtCursor(insertHTML);
   };
 
-  const insertAtCursor = (htmlContent) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+  const quillFormats = [
+    'header', 'font', 'size',
+    'bold', 'italic', 'underline', 'strike', 'blockquote',
+    'list', 'bullet', 'indent',
+    'link', 'image', 'video',
+    'color', 'background',
+    'align', 'code-block'
+  ];
 
-    const cursorPos = textarea.selectionStart;
-    const beforeText = content.substring(0, cursorPos);
-    const afterText = content.substring(cursorPos);
-    const newContent = beforeText + '\n' + htmlContent + '\n' + afterText;
+  // Custom image handler for Quill
+  function handleImageClick() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (file) {
+        try {
+          const response = await uploadFile(file);
+          const imageUrl = response.data.fullUrl;
+          
+          const quill = quillRef.current.getEditor();
+          const range = quill.getSelection();
+          quill.insertEmbed(range.index, 'image', imageUrl);
+          quill.setSelection(range.index + 1);
+        } catch (error) {
+          setError("Failed to upload image: " + error.message);
+        }
+      }
+    };
+    
+    input.click();
+  }
 
-    setContent(newContent);
+  // Custom video handler for Quill
+  function handleVideoClick() {
+    const url = prompt('Enter YouTube or Vimeo URL:');
+    if (!url) return;
+    
+    let embedUrl = '';
+    
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      const videoId = url.includes('youtu.be') 
+        ? url.split('youtu.be/')[1]?.split('?')[0]
+        : url.split('v=')[1]?.split('&')[0];
+      
+      if (videoId) {
+        embedUrl = `https://www.youtube.com/embed/${videoId}`;
+      }
+    } else if (url.includes('vimeo.com')) {
+      const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
+      if (videoId) {
+        embedUrl = `https://player.vimeo.com/video/${videoId}`;
+      }
+    }
+    
+    if (embedUrl) {
+      const quill = quillRef.current.getEditor();
+      const range = quill.getSelection();
+      quill.insertEmbed(range.index, 'video', embedUrl);
+      quill.setSelection(range.index + 1);
+    } else {
+      alert('Please enter a valid YouTube or Vimeo URL');
+    }
+  }
 
-    // Focus and set cursor position after inserted content
-    setTimeout(() => {
-      textarea.focus();
-      const newCursorPos = cursorPos + htmlContent.length + 2;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
+  // Enhanced image insertion handler for ImageUploader component
+  const handleImageInsert = async (imageData) => {
+    try {
+      let imageUrl = '';
+      
+      // Check if imageData is a file or HTML string
+      if (imageData instanceof File) {
+        const response = await uploadFile(imageData);
+        imageUrl = response.data.fullUrl;
+      } else if (typeof imageData === 'string' && imageData.includes('<img')) {
+        // Extract URL from HTML string
+        const urlMatch = imageData.match(/src="([^"]+)"/);
+        if (urlMatch) {
+          imageUrl = urlMatch[1];
+        }
+      } else if (typeof imageData === 'string') {
+        // Direct URL
+        imageUrl = imageData;
+      }
+
+      if (imageUrl && quillRef.current) {
+        const quill = quillRef.current.getEditor();
+        const range = quill.getSelection() || { index: 0 };
+        quill.insertEmbed(range.index, 'image', imageUrl);
+        quill.setSelection(range.index + 1);
+      }
+    } catch (error) {
+      setError("Failed to insert image: " + error.message);
+    }
   };
 
   const handleSave = async () => {
@@ -130,18 +206,15 @@ const BlogEditor = ({
       
       let response;
       if (articleId) {
-        // Update existing article
         response = await articlesService.updateArticle(articleId, postData);
         setSuccess('Article updated successfully!');
       } else {
-        // Create new article
         response = await articlesService.createArticle(postData);
         setSuccess('Article created successfully!');
       }
 
       console.log('Article saved:', response.data);
       
-      // Call onSave callback if provided (for parent component to handle post-save actions)
       if (onSave) {
         onSave(response.data);
       }
@@ -155,10 +228,8 @@ const BlogEditor = ({
 
   const handlePreview = () => {
     if (articleId) {
-      // If editing existing article, open published version
       window.open(`/article/${articleId}`, "_blank");
     } else {
-      // If creating new article, show preview modal
       setShowPreview(true);
     }
   };
@@ -178,7 +249,7 @@ const BlogEditor = ({
     return {
       title,
       subtitle,
-      content: content, // Keep as HTML since we're now using HTML formatting
+      content: content,
       category,
       tags: tags
         .split(",")
@@ -309,37 +380,77 @@ const BlogEditor = ({
             uploadFile={uploadFile}
           />
 
-          {/* Content Editor */}
+          {/* Content Editor with React Quill */}
           <div className="bg-gray-800 rounded-lg border border-gray-700">
-            <FormatToolbar
-              onFormat={setContent}
-              textareaRef={textareaRef}
-              content={content}
-              onImageInsert={handleImageInsert}
-            />
-
             <div className="p-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-4">
                 Article Content *
               </label>
-              <textarea
-                ref={textareaRef}
+              
+              {/* Custom CSS for dark theme */}
+              <style jsx>{`
+                .ql-toolbar {
+                  border-top: 1px solid #374151 !important;
+                  border-left: 1px solid #374151 !important;
+                  border-right: 1px solid #374151 !important;
+                  background: #1f2937 !important;
+                }
+                .ql-container {
+                  border-bottom: 1px solid #374151 !important;
+                  border-left: 1px solid #374151 !important;
+                  border-right: 1px solid #374151 !important;
+                  background: #111827 !important;
+                  color: white !important;
+                }
+                .ql-editor {
+                  color: white !important;
+                  font-size: 16px !important;
+                  line-height: 1.6 !important;
+                  min-height: 400px !important;
+                }
+                .ql-editor.ql-blank::before {
+                  color: #9ca3af !important;
+                  font-style: normal !important;
+                }
+                .ql-toolbar .ql-stroke {
+                  stroke: #d1d5db !important;
+                }
+                .ql-toolbar .ql-fill {
+                  fill: #d1d5db !important;
+                }
+                .ql-toolbar button:hover .ql-stroke {
+                  stroke: #fbbf24 !important;
+                }
+                .ql-toolbar button:hover .ql-fill {
+                  fill: #fbbf24 !important;
+                }
+                .ql-toolbar button.ql-active .ql-stroke {
+                  stroke: #fbbf24 !important;
+                }
+                .ql-toolbar button.ql-active .ql-fill {
+                  fill: #fbbf24 !important;
+                }
+              `}</style>
+
+              <ReactQuill
+                ref={quillRef}
+                theme="snow"
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={setContent}
+                modules={quillModules}
+                formats={quillFormats}
                 placeholder="Start writing your article content here...
 
-Use the formatting toolbar above to add:
-• Bold and italic text
-• Headings and lists
-• Links and images
-• Videos and other media
-
-You can also type HTML directly for advanced formatting."
-                rows={25}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none text-sm leading-relaxed"
+Use the toolbar above to format your text, add images, videos, and more.
+The editor supports rich text formatting, links, lists, and media embedding."
+                style={{
+                  background: '#111827',
+                  borderRadius: '8px',
+                }}
               />
-              <div className="mt-2 text-xs text-gray-400">
-                Rich HTML content editor - Use toolbar buttons or type HTML directly
+              
+              <div className="mt-3 text-xs text-gray-400">
+                Rich text editor with full formatting support. Use the toolbar to format text, insert images, and embed videos.
               </div>
             </div>
           </div>
