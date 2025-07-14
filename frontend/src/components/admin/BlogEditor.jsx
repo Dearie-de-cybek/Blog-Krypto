@@ -1,7 +1,6 @@
 import React, { useState, useRef } from "react";
 import { Save, Eye } from "lucide-react";
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { Editor } from '@tinymce/tinymce-react';
 import articlesService from "../../services/articlesService";
 import { useUpload } from "../../hooks/useUpload";
 
@@ -50,101 +49,117 @@ const BlogEditor = ({
   const [success, setSuccess] = useState("");
 
   // Refs
-  const quillRef = useRef(null);
+  const editorRef = useRef(null);
 
   // Backend integration
   const { uploadFile, uploading } = useUpload();
 
-  // React Quill configuration
-  const quillModules = {
-    toolbar: {
-      container: [
-        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ 'color': [] }, { 'background': [] }],
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-        [{ 'indent': '-1'}, { 'indent': '+1' }],
-        [{ 'align': [] }],
-        ['blockquote', 'code-block'],
-        ['link', 'image', 'video'],
-        ['clean']
-      ],
-      handlers: {
-        image: handleImageClick,
-        video: handleVideoClick
+  // TinyMCE configuration
+  const editorConfig = {
+    height: 500,
+    menubar: false,
+    plugins: [
+      'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+      'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+      'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons'
+    ],
+    toolbar: 'undo redo | blocks | ' +
+      'bold italic forecolor | alignleft aligncenter ' +
+      'alignright alignjustify | bullist numlist outdent indent | ' +
+      'removeformat | image media link | code preview fullscreen | help',
+    content_style: `
+      body { 
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+        font-size: 16px; 
+        line-height: 1.6; 
+        color: #333; 
+        background: #fff;
+        padding: 10px;
       }
-    },
-    clipboard: {
-      matchVisual: false,
-    }
-  };
-
-  const quillFormats = [
-    'header', 'font', 'size',
-    'bold', 'italic', 'underline', 'strike', 'blockquote',
-    'list', 'bullet', 'indent',
-    'link', 'image', 'video',
-    'color', 'background',
-    'align', 'code-block'
-  ];
-
-  // Custom image handler for Quill
-  function handleImageClick() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    
-    input.onchange = async () => {
-      const file = input.files[0];
-      if (file) {
+      img { 
+        max-width: 100%; 
+        height: auto; 
+        margin: 16px 0;
+      }
+      video {
+        max-width: 100%;
+        height: auto;
+        margin: 16px 0;
+      }
+    `,
+    skin: 'oxide-dark',
+    content_css: 'dark',
+    // Custom image upload handler
+    images_upload_handler: async (blobInfo, progress) => {
+      return new Promise(async (resolve, reject) => {
         try {
+          const file = blobInfo.blob();
           const response = await uploadFile(file);
-          const imageUrl = response.data.fullUrl;
-          
-          const quill = quillRef.current.getEditor();
-          const range = quill.getSelection();
-          quill.insertEmbed(range.index, 'image', imageUrl);
-          quill.setSelection(range.index + 1);
+          resolve(response.data.fullUrl);
         } catch (error) {
-          setError("Failed to upload image: " + error.message);
+          reject('Image upload failed: ' + error.message);
+        }
+      });
+    },
+    // Video/media upload handler
+    file_picker_callback: (callback, value, meta) => {
+      if (meta.filetype === 'image') {
+        const input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('accept', 'image/*');
+        
+        input.onchange = async function() {
+          const file = this.files[0];
+          try {
+            const response = await uploadFile(file);
+            callback(response.data.fullUrl, { alt: file.name });
+          } catch (error) {
+            setError('Image upload failed: ' + error.message);
+          }
+        };
+        
+        input.click();
+      } else if (meta.filetype === 'media') {
+        const url = prompt('Enter YouTube or Vimeo URL:');
+        if (url) {
+          let embedUrl = '';
+          
+          if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            const videoId = url.includes('youtu.be') 
+              ? url.split('youtu.be/')[1]?.split('?')[0]
+              : url.split('v=')[1]?.split('&')[0];
+            
+            if (videoId) {
+              embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            }
+          } else if (url.includes('vimeo.com')) {
+            const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
+            if (videoId) {
+              embedUrl = `https://player.vimeo.com/video/${videoId}`;
+            }
+          }
+          
+          if (embedUrl) {
+            callback(embedUrl);
+          } else {
+            callback(url); // Direct video URL
+          }
         }
       }
-    };
-    
-    input.click();
-  }
-
-  // Custom video handler for Quill
-  function handleVideoClick() {
-    const url = prompt('Enter YouTube or Vimeo URL:');
-    if (!url) return;
-    
-    let embedUrl = '';
-    
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      const videoId = url.includes('youtu.be') 
-        ? url.split('youtu.be/')[1]?.split('?')[0]
-        : url.split('v=')[1]?.split('&')[0];
-      
-      if (videoId) {
-        embedUrl = `https://www.youtube.com/embed/${videoId}`;
-      }
-    } else if (url.includes('vimeo.com')) {
-      const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
-      if (videoId) {
-        embedUrl = `https://player.vimeo.com/video/${videoId}`;
-      }
-    }
-    
-    if (embedUrl) {
-      const quill = quillRef.current.getEditor();
-      const range = quill.getSelection();
-      quill.insertEmbed(range.index, 'video', embedUrl);
-      quill.setSelection(range.index + 1);
-    } else {
-      alert('Please enter a valid YouTube or Vimeo URL');
-    }
-  }
+    },
+    // Additional settings
+    branding: false,
+    promotion: false,
+    resize: false,
+    statusbar: true,
+    elementpath: false,
+    word_count: true,
+    paste_as_text: false,
+    paste_auto_cleanup_on_paste: true,
+    convert_urls: false,
+    relative_urls: false,
+    remove_script_host: false,
+  };
 
   // Enhanced image insertion handler for ImageUploader component
   const handleImageInsert = async (imageData) => {
@@ -166,11 +181,9 @@ const BlogEditor = ({
         imageUrl = imageData;
       }
 
-      if (imageUrl && quillRef.current) {
-        const quill = quillRef.current.getEditor();
-        const range = quill.getSelection() || { index: 0 };
-        quill.insertEmbed(range.index, 'image', imageUrl);
-        quill.setSelection(range.index + 1);
+      if (imageUrl && editorRef.current) {
+        const editor = editorRef.current;
+        editor.insertContent(`<img src="${imageUrl}" alt="Image" style="max-width: 100%; height: auto; margin: 16px 0;" />`);
       }
     } catch (error) {
       setError("Failed to insert image: " + error.message);
@@ -380,77 +393,24 @@ const BlogEditor = ({
             uploadFile={uploadFile}
           />
 
-          {/* Content Editor with React Quill */}
+          {/* Content Editor with TinyMCE */}
           <div className="bg-gray-800 rounded-lg border border-gray-700">
             <div className="p-6">
               <label className="block text-sm font-medium text-gray-300 mb-4">
                 Article Content *
               </label>
               
-              {/* Custom CSS for dark theme */}
-              <style jsx>{`
-                .ql-toolbar {
-                  border-top: 1px solid #374151 !important;
-                  border-left: 1px solid #374151 !important;
-                  border-right: 1px solid #374151 !important;
-                  background: #1f2937 !important;
-                }
-                .ql-container {
-                  border-bottom: 1px solid #374151 !important;
-                  border-left: 1px solid #374151 !important;
-                  border-right: 1px solid #374151 !important;
-                  background: #111827 !important;
-                  color: white !important;
-                }
-                .ql-editor {
-                  color: white !important;
-                  font-size: 16px !important;
-                  line-height: 1.6 !important;
-                  min-height: 400px !important;
-                }
-                .ql-editor.ql-blank::before {
-                  color: #9ca3af !important;
-                  font-style: normal !important;
-                }
-                .ql-toolbar .ql-stroke {
-                  stroke: #d1d5db !important;
-                }
-                .ql-toolbar .ql-fill {
-                  fill: #d1d5db !important;
-                }
-                .ql-toolbar button:hover .ql-stroke {
-                  stroke: #fbbf24 !important;
-                }
-                .ql-toolbar button:hover .ql-fill {
-                  fill: #fbbf24 !important;
-                }
-                .ql-toolbar button.ql-active .ql-stroke {
-                  stroke: #fbbf24 !important;
-                }
-                .ql-toolbar button.ql-active .ql-fill {
-                  fill: #fbbf24 !important;
-                }
-              `}</style>
-
-              <ReactQuill
-                ref={quillRef}
-                theme="snow"
-                value={content}
-                onChange={setContent}
-                modules={quillModules}
-                formats={quillFormats}
-                placeholder="Start writing your article content here...
-
-Use the toolbar above to format your text, add images, videos, and more.
-The editor supports rich text formatting, links, lists, and media embedding."
-                style={{
-                  background: '#111827',
-                  borderRadius: '8px',
-                }}
-              />
+              <div className="border border-gray-600 rounded-lg overflow-hidden">
+                <Editor
+                  onInit={(evt, editor) => editorRef.current = editor}
+                  value={content}
+                  onEditorChange={(newContent) => setContent(newContent)}
+                  init={editorConfig}
+                />
+              </div>
               
               <div className="mt-3 text-xs text-gray-400">
-                Rich text editor with full formatting support. Use the toolbar to format text, insert images, and embed videos.
+                Professional rich text editor with image upload, video embedding, and full formatting support.
               </div>
             </div>
           </div>
