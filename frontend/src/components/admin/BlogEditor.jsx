@@ -1,12 +1,12 @@
 import React, { useState, useRef } from "react";
 import { Save, Eye } from "lucide-react";
-import { Editor } from '@tinymce/tinymce-react';
 import articlesService from "../../services/articlesService";
 import { useUpload } from "../../hooks/useUpload";
 
 // Import components
 import PreviewModal from "./PreviewModal";
 import ImageUploader from "./ImageUploader";
+import FormatToolbar from "./FormatToolbar";
 import PublishSettings from "./PublishSettings";
 import SEOSettings from "./SEOSettings";
 
@@ -49,145 +49,56 @@ const BlogEditor = ({
   const [success, setSuccess] = useState("");
 
   // Refs
-  const editorRef = useRef(null);
+  const textareaRef = useRef(null);
 
   // Backend integration
   const { uploadFile, uploading } = useUpload();
 
-  // TinyMCE configuration
-  const editorConfig = {
-    height: 500,
-    menubar: false,
-    plugins: [
-      'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-      'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-      'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons'
-    ],
-    toolbar: 'undo redo | blocks | ' +
-      'bold italic forecolor | alignleft aligncenter ' +
-      'alignright alignjustify | bullist numlist outdent indent | ' +
-      'removeformat | image media link | code preview fullscreen | help',
-    content_style: `
-      body { 
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-        font-size: 16px; 
-        line-height: 1.6; 
-        color: #333; 
-        background: #fff;
-        padding: 10px;
-      }
-      img { 
-        max-width: 100%; 
-        height: auto; 
-        margin: 16px 0;
-      }
-      video {
-        max-width: 100%;
-        height: auto;
-        margin: 16px 0;
-      }
-    `,
-    skin: 'oxide-dark',
-    content_css: 'dark',
-    // Custom image upload handler
-    images_upload_handler: async (blobInfo, progress) => {
-      return new Promise(async (resolve, reject) => {
-        try {
-          const file = blobInfo.blob();
-          const response = await uploadFile(file);
-          resolve(response.data.fullUrl);
-        } catch (error) {
-          reject('Image upload failed: ' + error.message);
-        }
-      });
-    },
-    // Video/media upload handler
-    file_picker_callback: (callback, value, meta) => {
-      if (meta.filetype === 'image') {
-        const input = document.createElement('input');
-        input.setAttribute('type', 'file');
-        input.setAttribute('accept', 'image/*');
-        
-        input.onchange = async function() {
-          const file = this.files[0];
-          try {
-            const response = await uploadFile(file);
-            callback(response.data.fullUrl, { alt: file.name });
-          } catch (error) {
-            setError('Image upload failed: ' + error.message);
-          }
-        };
-        
-        input.click();
-      } else if (meta.filetype === 'media') {
-        const url = prompt('Enter YouTube or Vimeo URL:');
-        if (url) {
-          let embedUrl = '';
-          
-          if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            const videoId = url.includes('youtu.be') 
-              ? url.split('youtu.be/')[1]?.split('?')[0]
-              : url.split('v=')[1]?.split('&')[0];
-            
-            if (videoId) {
-              embedUrl = `https://www.youtube.com/embed/${videoId}`;
-            }
-          } else if (url.includes('vimeo.com')) {
-            const videoId = url.split('vimeo.com/')[1]?.split('?')[0];
-            if (videoId) {
-              embedUrl = `https://player.vimeo.com/video/${videoId}`;
-            }
-          }
-          
-          if (embedUrl) {
-            callback(embedUrl);
-          } else {
-            callback(url); // Direct video URL
-          }
-        }
-      }
-    },
-    // Additional settings
-    branding: false,
-    promotion: false,
-    resize: false,
-    statusbar: true,
-    elementpath: false,
-    word_count: true,
-    paste_as_text: false,
-    paste_auto_cleanup_on_paste: true,
-    convert_urls: false,
-    relative_urls: false,
-    remove_script_host: false,
+  // Enhanced image insertion handler
+  const handleImageInsert = (imageData) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    let insertHTML = '';
+
+    // Check if imageData is a file (from toolbar) or HTML string (from ImageUploader)
+    if (imageData instanceof File) {
+      // Handle file upload from toolbar
+      uploadFile(imageData)
+        .then(response => {
+          const imageUrl = response.data.fullUrl;
+          insertHTML = `<img src="${imageUrl}" alt="${imageData.name}" style="max-width: 100%; height: auto; margin: 16px 0;" />`;
+          insertAtCursor(insertHTML);
+        })
+        .catch(err => {
+          setError("Failed to upload image: " + err.message);
+        });
+      return;
+    } else {
+      // Handle HTML string from ImageUploader
+      insertHTML = imageData;
+    }
+
+    insertAtCursor(insertHTML);
   };
 
-  // Enhanced image insertion handler for ImageUploader component
-  const handleImageInsert = async (imageData) => {
-    try {
-      let imageUrl = '';
-      
-      // Check if imageData is a file or HTML string
-      if (imageData instanceof File) {
-        const response = await uploadFile(imageData);
-        imageUrl = response.data.fullUrl;
-      } else if (typeof imageData === 'string' && imageData.includes('<img')) {
-        // Extract URL from HTML string
-        const urlMatch = imageData.match(/src="([^"]+)"/);
-        if (urlMatch) {
-          imageUrl = urlMatch[1];
-        }
-      } else if (typeof imageData === 'string') {
-        // Direct URL
-        imageUrl = imageData;
-      }
+  const insertAtCursor = (htmlContent) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
 
-      if (imageUrl && editorRef.current) {
-        const editor = editorRef.current;
-        editor.insertContent(`<img src="${imageUrl}" alt="Image" style="max-width: 100%; height: auto; margin: 16px 0;" />`);
-      }
-    } catch (error) {
-      setError("Failed to insert image: " + error.message);
-    }
+    const cursorPos = textarea.selectionStart;
+    const beforeText = content.substring(0, cursorPos);
+    const afterText = content.substring(cursorPos);
+    const newContent = beforeText + '\n' + htmlContent + '\n' + afterText;
+
+    setContent(newContent);
+
+    // Focus and set cursor position after inserted content
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = cursorPos + htmlContent.length + 2;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
   };
 
   const handleSave = async () => {
@@ -219,15 +130,18 @@ const BlogEditor = ({
       
       let response;
       if (articleId) {
+        // Update existing article
         response = await articlesService.updateArticle(articleId, postData);
         setSuccess('Article updated successfully!');
       } else {
+        // Create new article
         response = await articlesService.createArticle(postData);
         setSuccess('Article created successfully!');
       }
 
       console.log('Article saved:', response.data);
       
+      // Call onSave callback if provided (for parent component to handle post-save actions)
       if (onSave) {
         onSave(response.data);
       }
@@ -241,8 +155,10 @@ const BlogEditor = ({
 
   const handlePreview = () => {
     if (articleId) {
+      // If editing existing article, open published version
       window.open(`/article/${articleId}`, "_blank");
     } else {
+      // If creating new article, show preview modal
       setShowPreview(true);
     }
   };
@@ -262,7 +178,7 @@ const BlogEditor = ({
     return {
       title,
       subtitle,
-      content: content,
+      content: content, // Keep as HTML since we're now using HTML formatting
       category,
       tags: tags
         .split(",")
@@ -393,24 +309,37 @@ const BlogEditor = ({
             uploadFile={uploadFile}
           />
 
-          {/* Content Editor with TinyMCE */}
+          {/* Content Editor */}
           <div className="bg-gray-800 rounded-lg border border-gray-700">
+            <FormatToolbar
+              onFormat={setContent}
+              textareaRef={textareaRef}
+              content={content}
+              onImageInsert={handleImageInsert}
+            />
+
             <div className="p-6">
-              <label className="block text-sm font-medium text-gray-300 mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Article Content *
               </label>
-              
-              <div className="border border-gray-600 rounded-lg overflow-hidden">
-                <Editor
-                  onInit={(evt, editor) => editorRef.current = editor}
-                  value={content}
-                  onEditorChange={(newContent) => setContent(newContent)}
-                  init={editorConfig}
-                />
-              </div>
-              
-              <div className="mt-3 text-xs text-gray-400">
-                Professional rich text editor with image upload, video embedding, and full formatting support.
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Start writing your article content here...
+
+Use the formatting toolbar above to add:
+• Bold and italic text
+• Headings and lists
+• Links and images
+• Videos and other media
+
+You can also type HTML directly for advanced formatting."
+                rows={25}
+                className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none text-sm leading-relaxed"
+              />
+              <div className="mt-2 text-xs text-gray-400">
+                Rich HTML content editor - Use toolbar buttons or type HTML directly
               </div>
             </div>
           </div>
