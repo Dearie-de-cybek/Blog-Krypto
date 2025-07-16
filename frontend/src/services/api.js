@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const API = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: 'https://blog-krypto.onrender.com/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
