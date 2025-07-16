@@ -1,14 +1,15 @@
 import React, { useState } from "react";
 import { Save, Eye } from "lucide-react";
-import articlesService from "../../services/articlesService";
-import { useUpload } from "../../hooks/useUpload";
+import articlesService from "../services/articlesService";
+import { useUpload } from "../hooks/useUpload";
 
 // Import components
 import PreviewModal from "./PreviewModal";
 import ImageUploader from "./ImageUploader";
 import PublishSettings from "./PublishSettings";
 import SEOSettings from "./SEOSettings";
-import RichTextEditor from "./RichTextEditor"; 
+import RichTextEditor from "./RichTextEditor";
+
 const BlogEditor = ({
   articleId = null,
   initialData = null,
@@ -50,6 +51,13 @@ const BlogEditor = ({
   // Backend integration
   const { uploadFile, uploading } = useUpload();
 
+  // Handle image insertion into content
+  const handleImageInsert = (imageHTML) => {
+    // Insert the image HTML into the content
+    const newContent = content + '\n' + imageHTML + '\n';
+    setContent(newContent);
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     setError('');
@@ -79,18 +87,15 @@ const BlogEditor = ({
       
       let response;
       if (articleId) {
-        // Update existing article
         response = await articlesService.updateArticle(articleId, postData);
         setSuccess('Article updated successfully!');
       } else {
-        // Create new article
         response = await articlesService.createArticle(postData);
         setSuccess('Article created successfully!');
       }
 
       console.log('Article saved:', response.data);
       
-      // Call onSave callback if provided (for parent component to handle post-save actions)
       if (onSave) {
         onSave(response.data);
       }
@@ -104,10 +109,8 @@ const BlogEditor = ({
 
   const handlePreview = () => {
     if (articleId) {
-      // If editing existing article, open published version
       window.open(`/article/${articleId}`, "_blank");
     } else {
-      // If creating new article, show preview modal
       setShowPreview(true);
     }
   };
@@ -119,7 +122,8 @@ const BlogEditor = ({
       setSuccess("Featured image uploaded successfully!");
       setError("");
     } catch (err) {
-      setError("Failed to upload featured image: " + err.message);
+      setError("Failed to upload featured image: " + (err.message || 'Unknown error'));
+      console.error('Featured image upload error:', err);
     }
   };
 
@@ -127,7 +131,7 @@ const BlogEditor = ({
     return {
       title,
       subtitle,
-      content: content, // Keep as HTML since we're now using HTML formatting
+      content: content,
       category,
       tags: tags
         .split(",")
@@ -145,7 +149,6 @@ const BlogEditor = ({
   };
 
   const getWordCount = () => {
-    // Strip HTML tags for accurate word count
     const textOnly = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     return textOnly.split(/\s+/).filter((word) => word.length > 0).length;
   };
@@ -250,6 +253,7 @@ const BlogEditor = ({
 
           {/* Featured Image */}
           <ImageUploader
+            onImageInsert={handleImageInsert}
             onFeaturedImageChange={setFeaturedImage}
             onFeaturedImageUpload={handleFeaturedImageUpload}
             featuredImage={featuredImage}
@@ -276,7 +280,7 @@ Use the formatting toolbar to add:
 The editor supports rich HTML formatting for professional blog posts."
               uploadFile={uploadFile}
               uploading={uploading}
-              className="border-gray-600 bg-gray-900"
+              className=""
             />
             <div className="mt-2 text-xs text-gray-400">
               Rich text editor with toolbar formatting and media upload support

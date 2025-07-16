@@ -1,70 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { TrendingUp, Lock, Mail } from 'lucide-react';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
 
 const AdminLogin = () => {
-  const [credentials, setCredentials] = useState({
-    email: '',
-    password: ''
-  });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { login, isAuthenticated, loading } = useAuth();
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setCredentials({
-      ...credentials,
-      [e.target.name]: e.target.value
-    });
-    setError(''); // Clear error when user types
-  };
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/admin/dashboard');
+    }
+  }, [isAuthenticated, loading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!credentials.email || !credentials.password) {
-      setError('Please fill in all fields');
-      return;
-    }
+    setIsLoading(true);
+    setError('');
 
     try {
-      setLoading(true);
-      setError('');
-      
-      await login(credentials);
-      
-      // Redirect to admin dashboard
-      window.location.href = '/admin/dashboard';
-      
+      await login(email, password);
+      navigate('/admin/dashboard');
     } catch (err) {
-      setError(err.message || 'Login failed');
+      setError(err.message || 'Login failed. Please try again.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-yellow-400 text-xl">Loading...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="max-w-md w-full mx-4">
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
+      <div className="max-w-md w-full space-y-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-xl flex items-center justify-center">
-              <TrendingUp className="w-8 h-8 text-black" />
-            </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-              CryptoScope
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Admin Login</h1>
-          <p className="text-gray-400">Sign in to access the admin dashboard</p>
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-white">Admin Login</h2>
+          <p className="mt-2 text-gray-400">
+            Sign in to access the admin dashboard
+          </p>
         </div>
 
         {/* Login Form */}
-        <div className="bg-gray-900 rounded-xl p-8 border border-gray-800">
+        <div className="bg-gray-800 rounded-lg p-8 border border-gray-700">
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg mb-6">
+            <div className="mb-6 bg-red-500/20 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
@@ -75,20 +68,15 @@ const AdminLogin = () => {
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Email Address
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="email"
-                  name="email"
-                  value={credentials.email}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                  placeholder="admin@cryptoscope.com"
-                  required
-                />
-              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@example.com"
+                className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                required
+                disabled={isLoading}
+              />
             </div>
 
             {/* Password Field */}
@@ -97,40 +85,56 @@ const AdminLogin = () => {
                 Password
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
                 <input
-                  type="password"
-                  name="password"
-                  value={credentials.password}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
+                  className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent pr-12"
                   required
+                  disabled={isLoading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                  disabled={isLoading}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-semibold rounded-lg hover:from-yellow-500 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              disabled={isLoading || !email || !password}
+              className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+                isLoading || !email || !password
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-yellow-500 hover:bg-yellow-600 text-black'
+              }`}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400"></div>
+                  <span>Signing in...</span>
+                </>
+              ) : (
+                <>
+                  <LogIn size={20} />
+                  <span>Sign In</span>
+                </>
+              )}
             </button>
           </form>
-        </div>
 
-        {/* Footer */}
-        <div className="text-center mt-8">
-          <a 
-            href="/" 
-            className="text-gray-400 hover:text-yellow-400 transition-colors text-sm"
-          >
-            ← Back to website
-          </a>
+          {/* Default Credentials Info */}
+          <div className="mt-6 p-4 bg-gray-900 rounded-lg border border-gray-600">
+            <p className="text-xs text-gray-400 text-center">
+              Use your admin credentials to access the dashboard
+            </p>
+          </div>
         </div>
       </div>
     </div>
