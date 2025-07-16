@@ -1,123 +1,126 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Zap, TrendingUp } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+  ArrowLeft, Zap, BookOpen, Calendar, Mic, BarChart3, FileText
+} from 'lucide-react';
 import Header from '../components/Header';
 import FooterSection from '../components/Footer';
 
+const categoryIcons = {
+  Education: BookOpen,
+  Events: Calendar,
+  Interviews: Mic,
+  'Market Analysis': BarChart3,
+  'Press Release': FileText,
+  Default: Zap,
+};
+
+const IconBadge = ({ Icon }) => (
+  <motion.div
+    initial={{ scale: 0, rotate: -180 }}
+    animate={{ scale: 1, rotate: 0 }}
+    transition={{ duration: 0.8, ease: "easeOut" }}
+    className="relative w-24 h-24 mx-auto"
+  >
+    <motion.div
+      whileHover={{ scale: 1.1, rotate: 360 }}
+      transition={{ duration: 0.8, ease: "easeInOut" }}
+      className="w-full h-full bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 rounded-full flex items-center justify-center shadow-2xl"
+    >
+      <Icon className="w-12 h-12 text-black" />
+    </motion.div>
+    <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full blur-xl opacity-30 animate-pulse" />
+  </motion.div>
+);
+
 const ComingSoon = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const requestedCategory = location.state?.requestedCategory;
+  const reason = location.state?.reason;
+  const Icon = categoryIcons[requestedCategory] || categoryIcons.Default;
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black text-white">
       <Header />
-      
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
         {/* Back Button */}
-        <button
+        <motion.button
           onClick={() => navigate(-1)}
-          className="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300 transition-colors mb-8"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex items-center gap-2 text-yellow-400 hover:text-yellow-300 transition mb-8 group"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <motion.div
+            whileHover={{ x: -4 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </motion.div>
           <span>Go Back</span>
-        </button>
+        </motion.button>
 
-        {/* Main Content */}
-        <div className="text-center space-y-8">
-          {/* Icon */}
-          <div className="flex justify-center">
-            <div className="w-24 h-24 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center">
-              <Zap className="w-12 h-12 text-black" />
-            </div>
-          </div>
+        {/* Main Icon */}
+        <IconBadge Icon={Icon} />
 
-          {/* Title */}
-          <div className="space-y-4">
-            <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-              Coming Soon
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto">
-              We're working hard to bring you the latest news and insights in this category.
-            </p>
-          </div>
+        {/* Title and Category */}
+        <motion.div
+          className="text-center space-y-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
+            Coming Soon
+          </h1>
 
-          {/* Description */}
-          <div className="max-w-xl mx-auto space-y-4">
-            <p className="text-gray-400 text-lg">
-              Our team is curating the best content to keep you informed about market trends, 
-              cryptocurrency updates, and financial news.
-            </p>
-          </div>
+          {requestedCategory && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="inline-block px-4 py-2 bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30 rounded-full"
+            >
+              <span className="text-yellow-400 font-medium">{requestedCategory} Section</span>
+            </motion.div>
+          )}
 
-          {/* Features Preview */}
-          <div className="grid md:grid-cols-3 gap-6 mt-12">
-            <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-              <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <TrendingUp className="w-6 h-6 text-yellow-400" />
-              </div>
-              <h3 className="text-white font-semibold mb-2">Market Analysis</h3>
-              <p className="text-gray-400 text-sm">
-                In-depth analysis of cryptocurrency and financial markets
-              </p>
-            </div>
+          <motion.p
+            className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            We're working hard to bring you the latest {requestedCategory ? requestedCategory.toLowerCase() : 'content'} and insights.
+          </motion.p>
+        </motion.div>
 
-            <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-              <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <Clock className="w-6 h-6 text-yellow-400" />
-              </div>
-              <h3 className="text-white font-semibold mb-2">Real-time Updates</h3>
-              <p className="text-gray-400 text-sm">
-                Latest news and updates as they happen in the market
-              </p>
-            </div>
-
-            <div className="bg-gray-900 rounded-lg p-6 border border-gray-800">
-              <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <Zap className="w-6 h-6 text-yellow-400" />
-              </div>
-              <h3 className="text-white font-semibold mb-2">Expert Insights</h3>
-              <p className="text-gray-400 text-sm">
-                Professional analysis and insights from industry experts
-              </p>
-            </div>
-          </div>
-
-          {/* Call to Action */}
-          <div className="pt-8 space-y-4">
-            <p className="text-gray-300">
-              Want to be notified when this section launches?
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-              />
-              <button className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-semibold rounded-lg hover:from-yellow-500 hover:to-yellow-700 transition-colors">
-                Notify Me
-              </button>
-            </div>
-          </div>
-
-          {/* Navigation Suggestion */}
-          <div className="pt-8">
-            <p className="text-gray-400 mb-4">In the meantime, check out our other content:</p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <button
-                onClick={() => navigate('/')}
-                className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
-              >
-                Featured News
-              </button>
-              <button
-                onClick={() => navigate('/?section=trending')}
-                className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
-              >
-                Trending Stories
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+        {/* Description */}
+        <motion.div
+          className="max-w-xl mx-auto text-center space-y-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          <p className="text-gray-400 text-lg">
+            Our team is curating the best content to keep you informed about cryptocurrency trends, 
+            market analysis, and breaking news in the digital finance world.
+          </p>
+          {reason && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7 }}
+              className="text-sm text-gray-400 bg-gray-900/50 rounded-lg p-4 border border-gray-800"
+            >
+              {reason}
+            </motion.div>
+          )}
+        </motion.div>
+      </main>
 
       <FooterSection />
     </div>

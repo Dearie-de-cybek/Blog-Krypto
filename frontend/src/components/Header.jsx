@@ -1,20 +1,20 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Menu, X, TrendingUp, Clock } from 'lucide-react';
+import { Search, Menu, X, TrendingUp, Clock, Wifi, WifiOff } from 'lucide-react';
+import { useNigerianTime, useExchangeRates } from '../hooks/useExchangeRates';
+import navigationService from '../services/navigationService';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // Update time every second
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Nigerian time and exchange rates
+  const { time, shortTime } = useNigerianTime();
+  const { rates, error: ratesError } = useExchangeRates();
 
   // Handle scroll effect
   useEffect(() => {
@@ -31,18 +31,30 @@ const Header = () => {
   }, [location]);
 
   const navigationItems = [
-    { name: 'Home', path: '/' },
-    { name: 'Education', path: '/education' },
-    { name: 'Events', path: '/events' },
-    { name: 'Interviews', path: '/interviews' },
-    { name: 'Market Analysis', path: '/market-analysis' },
-    { name: 'Press Release', path: '/press-release' }
+    { name: 'Home', path: '/', type: 'direct' },
+    { name: 'Education', path: '/education', type: 'category', category: 'Education' },
+    { name: 'Events', path: '/events', type: 'category', category: 'Events' },
+    { name: 'Interviews', path: '/interviews', type: 'category', category: 'Interviews' },
+    { name: 'Market Analysis', path: '/market-analysis', type: 'category', category: 'Market Analysis' },
+    { name: 'Press Release', path: '/press-release', type: 'category', category: 'Press Release' }
   ];
 
   const isActivePath = (path) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
   };
+
+  const handleNavigation = (item) => {
+    if (item.type === 'direct') {
+      navigate(item.path);
+    } else if (item.type === 'category') {
+      navigationService.navigateToCategory(item.category, navigate);
+    }
+    setIsMenuOpen(false);
+  };
+
+  // Get top 3 rates for header display
+  const topRates = rates.slice(0, 3);
 
   return (
     <>
@@ -56,6 +68,81 @@ const Header = () => {
             : 'bg-black/80 backdrop-blur-sm border-b border-yellow-500/20'
         }`}
       >
+        {/* Top Bar with Exchange Rates (Desktop only) */}
+        <div className="hidden lg:block bg-gradient-to-r from-gray-900/50 to-black/50 border-b border-yellow-500/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between py-1.5">
+              {/* Nigerian Time */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="flex items-center space-x-2 text-xs text-gray-300"
+              >
+                <Clock className="w-3 h-3 text-yellow-400" />
+                <span className="font-mono">Lagos: {shortTime}</span>
+              </motion.div>
+
+              {/* Exchange Rates Ticker */}
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="flex items-center space-x-4"
+              >
+                {ratesError ? (
+                  <div className="flex items-center space-x-1 text-xs text-orange-400">
+                    <WifiOff className="w-3 h-3" />
+                    <span>Rates offline</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center space-x-1 text-xs text-gray-400">
+                      <Wifi className="w-3 h-3 text-green-400" />
+                      <span>Live Rates:</span>
+                    </div>
+                    {topRates.map((rate, index) => (
+                      <React.Fragment key={rate.currency}>
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.7 + index * 0.1 }}
+                          className="flex items-center space-x-1 text-xs"
+                        >
+                          <span className="text-gray-400">{rate.currency}:</span>
+                          <span className="text-white font-medium">
+                            ₦{rate.rate?.toLocaleString() || 'N/A'}
+                          </span>
+                          {rate.changePercent !== undefined && (
+                            <span className={`${
+                              rate.changePercent > 0 ? 'text-green-400' : 
+                              rate.changePercent < 0 ? 'text-red-400' : 'text-gray-400'
+                            }`}>
+                              {rate.changePercent > 0 ? '+' : ''}{rate.changePercent?.toFixed(1)}%
+                            </span>
+                          )}
+                        </motion.div>
+                        {index < topRates.length - 1 && <span className="text-gray-600 text-xs">•</span>}
+                      </React.Fragment>
+                    ))}
+                  </>
+                )}
+              </motion.div>
+
+              {/* Powered by */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.8 }}
+                className="text-xs text-gray-500"
+              >
+                Powered by Monierate
+              </motion.div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Header */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             
@@ -91,8 +178,8 @@ const Header = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  <Link
-                    to={item.path}
+                  <button
+                    onClick={() => handleNavigation(item)}
                     className={`relative text-sm font-medium transition-all duration-300 hover:text-yellow-400 ${
                       isActivePath(item.path) 
                         ? 'text-yellow-400' 
@@ -109,32 +196,54 @@ const Header = () => {
                         transition={{ duration: 0.3 }}
                       />
                     )}
-                  </Link>
+                  </button>
                 </motion.div>
               ))}
             </nav>
 
             {/* Right Side */}
             <div className="flex items-center space-x-4">
-              {/* Live Clock */}
+              {/* Live Clock (Mobile & Desktop) */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.8 }}
-                className="hidden md:flex items-center space-x-2 text-xs text-gray-400 bg-gray-900/50 px-3 py-1.5 rounded-full border border-yellow-500/20"
+                className="flex items-center space-x-2 text-xs text-gray-400 bg-gray-900/50 px-3 py-1.5 rounded-full border border-yellow-500/20"
               >
                 <Clock className="w-3 h-3 text-yellow-400" />
-                <span className="font-mono">{currentTime.toLocaleTimeString()}</span>
+                <span className="font-mono hidden md:inline">{shortTime}</span>
+                <span className="font-mono md:hidden text-xs">{shortTime}</span>
+              </motion.div>
+
+              {/* Mobile Exchange Rate Indicator */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.9 }}
+                className="lg:hidden"
+              >
+                {ratesError ? (
+                  <WifiOff className="w-4 h-4 text-orange-400" />
+                ) : (
+                  <div className="flex items-center space-x-1">
+                    <Wifi className="w-3 h-3 text-green-400" />
+                    {topRates[0] && (
+                      <span className="text-xs text-white font-medium">
+                        ${topRates[0].rate ? Math.round(topRates[0].rate) : 'N/A'}
+                      </span>
+                    )}
+                  </div>
+                )}
               </motion.div>
 
               {/* Search Button */}
-              <motion.button
+              {/* <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 className="p-2.5 hover:bg-yellow-500/10 rounded-xl transition-colors border border-transparent hover:border-yellow-500/20"
               >
                 <Search className="w-5 h-5 text-gray-300 hover:text-yellow-400 transition-colors" />
-              </motion.button>
+              </motion.button> */}
 
               {/* Mobile Menu Button */}
               <motion.button
@@ -216,6 +325,46 @@ const Header = () => {
                 </div>
               </div>
 
+              {/* Mobile Exchange Rates */}
+              <div className="p-6 border-b border-yellow-500/20">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 text-sm text-gray-300 mb-3">
+                    {ratesError ? (
+                      <>
+                        <WifiOff className="w-4 h-4 text-orange-400" />
+                        <span>Exchange rates offline</span>
+                      </>
+                    ) : (
+                      <>
+                        <Wifi className="w-4 h-4 text-green-400" />
+                        <span>Live Exchange Rates</span>
+                      </>
+                    )}
+                  </div>
+                  
+                  {!ratesError && topRates.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {topRates.map((rate) => (
+                        <div key={rate.currency} className="text-center bg-gray-800/50 rounded-lg p-2">
+                          <div className="text-xs text-gray-400">{rate.currency}/NGN</div>
+                          <div className="text-sm font-medium text-white">
+                            ₦{rate.rate?.toLocaleString() || 'N/A'}
+                          </div>
+                          {rate.changePercent !== undefined && (
+                            <div className={`text-xs ${
+                              rate.changePercent > 0 ? 'text-green-400' : 
+                              rate.changePercent < 0 ? 'text-red-400' : 'text-gray-400'
+                            }`}>
+                              {rate.changePercent > 0 ? '+' : ''}{rate.changePercent?.toFixed(1)}%
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Menu Items */}
               <div className="p-6 space-y-2">
                 {navigationItems.map((item, index) => (
@@ -225,9 +374,9 @@ const Header = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.1 }}
                   >
-                    <Link
-                      to={item.path}
-                      className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
+                    <button
+                      onClick={() => handleNavigation(item)}
+                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
                         isActivePath(item.path)
                           ? 'text-yellow-400 bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30'
                           : 'text-gray-300 hover:text-yellow-400 hover:bg-yellow-500/10 border border-transparent hover:border-yellow-500/20'
@@ -247,7 +396,7 @@ const Header = () => {
                           />
                         )}
                       </motion.div>
-                    </Link>
+                    </button>
                   </motion.div>
                 ))}
               </div>
@@ -256,7 +405,7 @@ const Header = () => {
               <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-yellow-500/20">
                 <div className="flex items-center justify-center space-x-2 text-xs text-gray-400">
                   <Clock className="w-3 h-3 text-yellow-400" />
-                  <span className="font-mono">{currentTime.toLocaleTimeString()}</span>
+                  <span className="font-mono">Lagos: {shortTime}</span>
                 </div>
               </div>
             </motion.div>
@@ -265,7 +414,7 @@ const Header = () => {
       </AnimatePresence>
 
       {/* Spacer for fixed header */}
-      <div className="h-16" />
+      <div className="h-16 lg:h-20" />
     </>
   );
 };
