@@ -2,38 +2,56 @@ import { useState, useEffect } from 'react';
 import authService from '../services/authService';
 
 export const useAuth = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [admin, setAdmin] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuthStatus();
+    const checkAuth = async () => {
+      try {
+        if (authService.isAuthenticated()) {
+          // Get admin info from localStorage first (faster)
+          const adminInfo = authService.getAdminInfo();
+          setAdmin(adminInfo);
+          setIsAuthenticated(true);
+          
+          // Optionally verify with server (uncomment if needed)
+          // const response = await authService.getMe();
+          // setAdmin(response.data);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        // Clear invalid auth data
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminInfo');
+        setAdmin(null);
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
-  const checkAuthStatus = async () => {
+  const login = async (email, password) => {
     try {
-      if (authService.isAuthenticated()) {
-        const adminInfo = authService.getAdminInfo();
-        setAdmin(adminInfo);
+      setLoading(true);
+      const response = await authService.login({ email, password });
+      
+      if (response.success) {
+        setAdmin(response.admin);
         setIsAuthenticated(true);
+        return response;
+      } else {
+        throw new Error(response.message || 'Login failed');
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
-      logout();
+      setAdmin(null);
+      setIsAuthenticated(false);
+      throw error;
     } finally {
       setLoading(false);
-    }
-  };
-
-  const login = async (credentials) => {
-    // eslint-disable-next-line no-useless-catch
-    try {
-      const response = await authService.login(credentials);
-      setAdmin(response.admin);
-      setIsAuthenticated(true);
-      return response;
-    } catch (error) {
-      throw error;
     }
   };
 
@@ -45,15 +63,17 @@ export const useAuth = () => {
     } finally {
       setAdmin(null);
       setIsAuthenticated(false);
+      
+      // Redirect to login
+      window.location.href = '/admin/login';
     }
   };
 
   return {
-    isAuthenticated,
     admin,
+    isAuthenticated,
     loading,
     login,
-    logout,
-    checkAuthStatus
+    logout
   };
 };
