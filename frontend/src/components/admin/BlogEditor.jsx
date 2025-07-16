@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Save, Eye } from "lucide-react";
-import articlesService from "../services/articlesService";
-import { useUpload } from "../hooks/useUpload";
+import articlesService from "../../services/articlesService";
+import { useUpload } from "../../hooks/useUpload";
 
 // Import components
 import PreviewModal from "./PreviewModal";
