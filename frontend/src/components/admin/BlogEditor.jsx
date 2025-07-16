@@ -8,8 +8,7 @@ import PreviewModal from "./PreviewModal";
 import ImageUploader from "./ImageUploader";
 import PublishSettings from "./PublishSettings";
 import SEOSettings from "./SEOSettings";
-import RichTextEditor from "./RichTextEditor"; // Import the new rich text editor
-
+import RichTextEditor from "./RichTextEditor"; 
 const BlogEditor = ({
   articleId = null,
   initialData = null,
