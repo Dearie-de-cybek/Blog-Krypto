@@ -10,9 +10,13 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth"; // Added auth import
 
 const AdminSidebar = ({ activeTab, setActiveTab, editingArticle }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Get auth context for logout
+  const { logout } = useAuth();
 
   const sidebarItems = [
     { id: "dashboard", name: "Dashboard", icon: Home },
@@ -26,10 +30,16 @@ const AdminSidebar = ({ activeTab, setActiveTab, editingArticle }) => {
     setIsMobileMenuOpen(false); // Close mobile menu when tab is selected
   };
 
-  const handleLogout = () => {
-    // Add your logout logic here
-    console.log("Logout clicked");
-    setIsMobileMenuOpen(false);
+  const handleLogout = async () => {
+    try {
+      await logout(); // Use the auth logout function
+      setIsMobileMenuOpen(false);
+      // The logout function will redirect to login automatically
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if logout fails, redirect to login
+      window.location.href = '/admin/login';
+    }
   };
 
   // Sidebar content component (reused for both desktop and mobile)

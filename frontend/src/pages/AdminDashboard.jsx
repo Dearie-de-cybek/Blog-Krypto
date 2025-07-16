@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
 import AdminSidebar from '../components/admin/AdminSidebar';
 import DashboardStats from '../components/admin/DashboardStats';
 import BlogEditor from '../components/admin/BlogEditor';
@@ -8,6 +9,9 @@ import AnalyticsDashboard from '../components/admin/AnalyticsDashboard';
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editingArticle, setEditingArticle] = useState(null); // { id, data } or null
+  
+  // Get auth context
+  const { admin } = useAuth();
 
   const renderContent = () => {
     switch (activeTab) {
@@ -54,7 +58,21 @@ const AdminDashboard = () => {
           <div className="space-y-6">
             <h1 className="text-2xl font-bold text-white">Settings</h1>
             <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <p className="text-gray-300">Settings panel coming soon...</p>
+              <div className="space-y-4">
+                <p className="text-gray-300">Settings panel coming soon...</p>
+                
+                {/* Show current admin info */}
+                {admin && (
+                  <div className="border-t border-gray-700 pt-4">
+                    <h3 className="text-lg font-medium text-white mb-2">Admin Information</h3>
+                    <div className="space-y-1 text-gray-300">
+                      <p><span className="font-medium">Name:</span> {admin.name}</p>
+                      <p><span className="font-medium">Email:</span> {admin.email}</p>
+                      <p><span className="font-medium">ID:</span> {admin.id}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         );
